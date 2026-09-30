@@ -1,7 +1,12 @@
 # FinGuard — Financial Anomaly & Expense Prediction Portal
 
-**Live demo:** https://ashu775-sanji.github.io/finguard-fullstack-color-zi/
+<p align="center">
+  <a href="https://ashu775-sanji.github.io/finguard-fullstack-color-zi/"><b>🚀 OPEN THE LIVE FINGUARD APPLICATION</b></a>
+</p>
 
+[![FinGuard live dashboard](docs/finguard-preview.png)](https://ashu775-sanji.github.io/finguard-fullstack-color-zi/)
+
+> The GitHub repository displays source code and documentation. Click the launch link or dashboard preview above to open the working application.
 
 A production-style full-stack fintech starter with React/TypeScript, FastAPI, PostgreSQL-ready SQLAlchemy, JWT authentication, anomaly detection, expense forecasting, budgets, goals, notifications and report endpoints.
 
