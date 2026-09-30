@@ -10,6 +10,13 @@
 
 A production-style full-stack fintech starter with React/TypeScript, FastAPI, PostgreSQL-ready SQLAlchemy, JWT authentication, anomaly detection, expense forecasting, budgets, goals, notifications and report endpoints.
 
+## Demo login
+
+- Email: `demo@finguard.app`
+- Password: `FinGuard@2026`
+
+New visitors can also create an account from the login screen.
+
 ## Quick start
 
 ```bash
