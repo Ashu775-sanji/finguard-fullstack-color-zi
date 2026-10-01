@@ -45,3 +45,15 @@ Run `pytest backend/tests` and `npm run build` before deployment.
 FinGuard AI is implemented server-side through FastAPI. It retrieves the authenticated user's transaction summary, category and merchant totals, budgets, goals, recent activity, and Guard Score before requesting a response from Gemini. The integration uses low-temperature grounded prompting, bounded conversation history, source labels, retry handling, a fallback Gemini model, and a deterministic financial fallback.
 
 Set `GEMINI_API_KEY` in the backend environment. Never place it in the Vite frontend. A `render.yaml` blueprint is included for a free Render web service and PostgreSQL deployment.
+
+## Financial scam protection and incident response
+
+FinGuard now includes an authenticated Scam Analyzer, URL risk checks, a CSV Transaction Monitor with live demo simulation, Incident Center, Recovery Assistant, Evidence Vault with PDF export, Scam Education, safety-dashboard APIs, and Gemini chat grounded in recent scam analyses and incident records.
+
+### Safety boundaries
+- FinGuard does not recover money directly and does not impersonate any bank, payment provider, police force, government body, or authority.
+- AI and model outputs are risk indicators, not definitive proof. Important information should be independently verified through official channels.
+- Never submit passwords, PINs, CVVs, OTPs, private keys, or banking login credentials.
+- Demonstration and public-dataset records are labeled and are not presented as live bank data.
+
+See `docs/SAFETY_PLATFORM.md` for architecture, model training, datasets, security, and limitations.

@@ -100,7 +100,7 @@ export default function Landing() {
   return (
     <div className="landing">
       <div className="landTop">
-        <span>FINANCIAL CONTROL, BUILT FOR REAL LIFE.</span>
+        <span>FINANCIAL SAFETY, BUILT FOR REAL LIFE.</span>
         <span>INDIA · INR</span>
       </div>
       <nav className="landNav">
@@ -166,18 +166,18 @@ export default function Landing() {
           />
           <div className="heroShade" />
           <div className="landHeroCopy">
-            <span>YOUR MONEY. YOUR MOVE.</span>
+            <span>DETECT SCAMS. PROTECT YOUR MONEY.</span>
             <h1>
-              MOVE MONEY
+              YOUR FINANCIAL
               <br />
-              FORWARD.
+              SAFETY LAYER.
             </h1>
             <p>
-              Know where it goes. Protect what you earn. Build what comes next.
+              FinGuard analyzes suspicious messages, URLs and financial activity—then helps you understand the risk and take the right next step.
             </p>
             <div>
               <Link className="blackCta" to="/login">
-                Start now <ArrowRight />
+                Analyze a scam <ArrowRight />
               </Link>
               <a
                 className="textCta"
@@ -187,7 +187,7 @@ export default function Landing() {
                   scrollTo("platform");
                 }}
               >
-                See how it works <ArrowDown />
+                Explore FinGuard <ArrowDown />
               </a>
             </div>
           </div>
@@ -206,20 +206,20 @@ export default function Landing() {
         </section>
         <div className="ticker">
           <div>
-            SPEND SMARTER <i /> CATCH THE UNUSUAL <i /> PLAN WHAT'S NEXT <i />{" "}
-            OWN YOUR MONEY <i /> SPEND SMARTER <i /> CATCH THE UNUSUAL
+            DETECT SCAMS <i /> EXPLAIN THE RISK <i /> PRESERVE EVIDENCE <i />{" "}
+            KNOW WHAT TO DO NEXT <i /> PROTECT YOUR MONEY
           </div>
         </div>
         <section id="platform" className="editorialIntro">
           <span>THE FINGUARD PLATFORM</span>
           <h2>
-            Everything your money needs.
+            Detect the signal.
             <br />
-            <em>Nothing it doesn't.</em>
+            <em>Respond with clarity.</em>
           </h2>
           <p>
-            A focused financial system that turns daily transactions into clear
-            decisions.
+            An AI-powered financial safety platform for scam analysis,
+            transaction monitoring, incident documentation and guided response.
           </p>
         </section>
         <section className="featureGrid">
@@ -235,13 +235,13 @@ export default function Landing() {
             </div>
             <span>01 / SEE IT</span>
             <h3>
-              Every rupee.
+              Suspicious message?
               <br />
-              In full view.
+              See every signal.
             </h3>
             <p>
-              Understand income, spending and cash flow without digging through
-              clutter.
+              Analyze urgency, impersonation, sensitive requests and suspicious
+              links with human-readable explanations.
             </p>
             <button
               className="cardLink"
@@ -250,7 +250,7 @@ export default function Landing() {
                 setDetail("analytics");
               }}
             >
-              Explore analytics <ArrowRight />
+              Analyze scam signals <ArrowRight />
             </button>
           </article>
           <article
@@ -296,13 +296,13 @@ export default function Landing() {
             </div>
             <span>02 / PROTECT IT</span>
             <h3>
-              Spot the move
+              Document the incident.
               <br />
-              that doesn't fit.
+              Know what comes next.
             </h3>
             <p>
-              FinGuard flags unusual spending before it becomes a bigger
-              problem.
+              Create an evidence timeline and follow prioritized steps for
+              legitimate reporting and account protection.
             </p>
             <button
               className="cardLink"
@@ -311,7 +311,7 @@ export default function Landing() {
                 setDetail("protection");
               }}
             >
-              Review anomalies <ArrowRight />
+              Open incident response <ArrowRight />
             </button>
           </article>
         </section>
@@ -360,9 +360,9 @@ export default function Landing() {
           <div>
             <span>BUILT DIFFERENT</span>
             <h2>
-              LESS NOISE.
+              LESS PANIC.
               <br />
-              MORE CONTROL.
+              MORE CLARITY.
             </h2>
           </div>
           <div className="statementList">
@@ -589,7 +589,7 @@ export default function Landing() {
         <section className="lastCall">
           <span>NO MORE GUESSING.</span>
           <h2>
-            YOUR MONEY
+            SAFER MONEY
             <br />
             STARTS HERE.
           </h2>

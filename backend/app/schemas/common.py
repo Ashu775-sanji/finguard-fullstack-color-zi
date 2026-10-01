@@ -13,3 +13,8 @@ class AIAsk(BaseModel):
  question:str=Field(min_length=2,max_length=1000);history:list[AIHistoryItem]=Field(default_factory=list,max_length=12)
 class AIAnswer(BaseModel):
  answer:str;sources:list[str];grounded_transactions:int;model:str
+class ScamRequest(BaseModel):text:str=Field(min_length=3,max_length=6000);url:str|None=Field(None,max_length=2000)
+class URLRequest(BaseModel):url:str=Field(min_length=4,max_length=2000)
+class IncidentCreate(BaseModel):title:str=Field(min_length=3,max_length=180);occurred_at:datetime;scam_type:str=Field(min_length=2,max_length=60);amount:float=Field(0,ge=0,le=1_000_000_000);payment_method:str|None=None;transaction_reference:str|None=None;phone_number:str|None=None;url:str|None=None;description:str=Field(min_length=10,max_length=6000)
+class IncidentUpdate(BaseModel):status:str=Field(pattern='^(NEW|DOCUMENTING|REPORTED|UNDER_REVIEW|RESOLVED)$')
+class EvidenceCreate(BaseModel):evidence_type:str=Field(min_length=2,max_length=60);label:str=Field(min_length=2,max_length=180);content:str=Field(min_length=1,max_length=6000);occurred_at:datetime|None=None

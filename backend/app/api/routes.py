@@ -78,6 +78,8 @@ async def ask_ai(body:AIAsk,db:Session=Depends(get_db),u:User=Depends(current_us
  recent=[f'{x.date}: {x.merchant} | {x.category} | {x.transaction_type.value} | {x.amount:.2f}' for x in rows[:12]]
  budgets=list(db.scalars(select(Budget).where(Budget.user_id==u.id)).all())
  goals=list(db.scalars(select(Goal).where(Goal.user_id==u.id)).all())
+ safety=list(db.scalars(select(ScamAnalysis).where(ScamAnalysis.user_id==u.id).order_by(ScamAnalysis.created_at.desc()).limit(5)).all())
+ incidents=list(db.scalars(select(Incident).where(Incident.user_id==u.id).order_by(Incident.created_at.desc()).limit(5)).all())
  health=guard_score(income,expenses)
  context='\n'.join([
   f'Currency: {u.currency}',f'Income total: {income:.2f}',f'Expense total: {expenses:.2f}',f'Balance: {income-expenses:.2f}',
@@ -86,11 +88,15 @@ async def ask_ai(body:AIAsk,db:Session=Depends(get_db),u:User=Depends(current_us
   'Top merchants: '+(', '.join(f'{k}: {v:.2f}' for k,v in top_merchants) or 'none'),
   'Budgets: '+(', '.join(f'{x.category} limit {x.limit:.2f}, spent {x.spent:.2f}' for x in budgets[:8]) or 'none'),
   'Goals: '+(', '.join(f'{x.name} {x.current_amount:.2f}/{x.target_amount:.2f}, deadline {x.deadline}' for x in goals[:8]) or 'none'),
+  'Recent scam analyses: '+(', '.join(f'{x.category} risk {x.risk_level} score {x.risk_score:.0f}' for x in safety) or 'none'),
+  'Open incidents: '+(', '.join(f'{x.incident_code} {x.scam_type} {x.status} amount {x.amount:.2f}' for x in incidents if x.status!="RESOLVED") or 'none'),
   'Recent transactions:',*recent
  ])
  sources=['transaction summary','category totals','merchant totals','Guard Score']
  if budgets:sources.append('budgets')
  if goals:sources.append('financial goals')
+ if safety:sources.append('scam analyses')
+ if incidents:sources.append('incident records')
  try:
   answer,model=await generate_financial_answer(body.question,context,[x.model_dump() for x in body.history])
  except Exception:
@@ -104,3 +110,77 @@ async def ask_ai(body:AIAsk,db:Session=Depends(get_db),u:User=Depends(current_us
 
 @router.get('/reports/monthly')
 def report(db:Session=Depends(get_db),u:User=Depends(current_user)):return {'period':date.today().strftime('%Y-%m'),'summary':summary(db,u),'generated_for':u.email}
+
+# Financial safety and incident-response APIs
+from fastapi import UploadFile,File
+from app.models.entities import ScamAnalysis,Incident,Evidence,Alert,ModelPrediction
+from app.services.scam import analyze_message,analyze_url,recovery_checklist
+import csv,io,json
+
+@router.post('/scam/analyze')
+async def scam_analyze(body:ScamRequest,db:Session=Depends(get_db),u:User=Depends(current_user)):
+ result=analyze_message(body.text,body.url)
+ row=ScamAnalysis(user_id=u.id,text=body.text,url=body.url,risk_score=result['risk_score'],risk_level=result['risk_level'],category=result['category'],signals=json.dumps(result['signals']),explanation=result['explanation']);db.add(row)
+ db.add(ModelPrediction(user_id=u.id,model_name='FinGuard Explainable Scam Baseline',prediction_type='scam_message',score=result['risk_score']/100,label=result['category'],explanation=result['explanation']))
+ if result['risk_level'] in ('HIGH','CRITICAL'):db.add(Alert(user_id=u.id,title='Potential scam detected',risk_level=result['risk_level'],details=result['explanation']))
+ db.commit();return {'analysis_id':row.id,**result,'verified':False}
+
+@router.post('/url/analyze')
+def url_analyze(body:URLRequest,u:User=Depends(current_user)):return {**analyze_url(body.url),'verified':False}
+
+@router.post('/transactions/upload')
+async def upload_transactions(file:UploadFile=File(...),db:Session=Depends(get_db),u:User=Depends(current_user)):
+ if not file.filename or not file.filename.lower().endswith('.csv'):raise HTTPException(422,'Upload a CSV file')
+ raw=await file.read(2_000_001)
+ if len(raw)>2_000_000:raise HTTPException(413,'CSV must be 2 MB or smaller')
+ try:
+  reader=csv.DictReader(io.StringIO(raw.decode('utf-8-sig')));required={'date','amount','merchant','category','payment_method'}
+  if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):raise HTTPException(422,f'Missing required columns: {sorted(required-set(reader.fieldnames or []))}')
+  created=[]
+  for i,row in enumerate(reader):
+   if i>=1000:break
+   try:
+    t=Transaction(user_id=u.id,date=date.fromisoformat(row['date']),amount=abs(float(row['amount'])),merchant=row['merchant'][:120],category=row['category'][:80],payment_method=row.get('payment_method','')[:50],location=row.get('location','')[:120],description=f"Imported reference: {row.get('transaction_id','')[:100]}",transaction_type=TxType.expense);db.add(t);created.append(t)
+   except (ValueError,TypeError):continue
+  db.commit();return {'imported':len(created),'skipped':max(0,(i+1 if 'i' in locals() else 0)-len(created)),'message':'Imported records are user-provided data, not live bank transactions.'}
+ except UnicodeDecodeError:raise HTTPException(422,'CSV must use UTF-8 encoding')
+
+@router.get('/transactions/anomalies')
+def transaction_anomalies(db:Session=Depends(get_db),u:User=Depends(current_user)):return scan(db,u)
+
+@router.post('/incidents',status_code=201)
+def create_incident(body:IncidentCreate,db:Session=Depends(get_db),u:User=Depends(current_user)):
+ n=(db.scalar(select(func.count()).select_from(Incident).where(Incident.user_id==u.id)) or 0)+1;code=f'FG-{date.today().year}-{n:05d}';analysis=analyze_message(body.description,body.url)
+ row=Incident(**body.model_dump(),incident_code=code,user_id=u.id,risk_level=analysis['risk_level'],status='DOCUMENTING');db.add(row);db.commit();db.refresh(row);return {'id':row.id,'incident_code':row.incident_code,'risk_level':row.risk_level,'status':row.status}
+
+@router.get('/incidents')
+def list_incidents(db:Session=Depends(get_db),u:User=Depends(current_user)):return db.scalars(select(Incident).where(Incident.user_id==u.id).order_by(Incident.created_at.desc())).all()
+
+def owned_incident(iid:str,db:Session,u:User):
+ row=db.scalar(select(Incident).where(Incident.id==iid,Incident.user_id==u.id))
+ if not row:raise HTTPException(404,'Incident not found')
+ return row
+
+@router.get('/incidents/{incident_id}')
+def get_incident(incident_id:str,db:Session=Depends(get_db),u:User=Depends(current_user)):
+ row=owned_incident(incident_id,db,u);ev=db.scalars(select(Evidence).where(Evidence.incident_id==row.id,Evidence.user_id==u.id).order_by(Evidence.occurred_at,Evidence.created_at)).all();return {'incident':row,'evidence':ev,'checklist':recovery_checklist(row.scam_type,row.description),'notice':'FinGuard cannot recover funds directly. Recovery depends on the relevant institution and authorities.'}
+
+@router.patch('/incidents/{incident_id}')
+def update_incident(incident_id:str,body:IncidentUpdate,db:Session=Depends(get_db),u:User=Depends(current_user)):
+ row=owned_incident(incident_id,db,u);row.status=body.status;db.commit();return {'id':row.id,'status':row.status}
+
+@router.post('/incidents/{incident_id}/evidence',status_code=201)
+def add_evidence(incident_id:str,body:EvidenceCreate,db:Session=Depends(get_db),u:User=Depends(current_user)):
+ row=owned_incident(incident_id,db,u);ev=Evidence(**body.model_dump(),incident_id=row.id,user_id=u.id);db.add(ev);db.commit();db.refresh(ev);return ev
+
+@router.get('/incidents/{incident_id}/report')
+def incident_report(incident_id:str,db:Session=Depends(get_db),u:User=Depends(current_user)):
+ data=get_incident(incident_id,db,u);row=data['incident'];return {'generated_by':'FinGuard','verification_notice':'AI-generated analysis should be independently verified.','recovery_notice':'FinGuard cannot recover funds directly.','incident':row,'evidence':data['evidence'],'recommended_actions':data['checklist']}
+
+@router.get('/dashboard')
+def safety_dashboard(db:Session=Depends(get_db),u:User=Depends(current_user)):
+ tx=list(db.scalars(select(Transaction).where(Transaction.user_id==u.id)).all());analyses=list(db.scalars(select(ScamAnalysis).where(ScamAnalysis.user_id==u.id)).all());incidents=list(db.scalars(select(Incident).where(Incident.user_id==u.id)).all());expense=sum(x.amount for x in tx if x.transaction_type==TxType.expense)
+ return {'total_transactions':len(tx),'suspicious_transactions':len([x for x in scan(db,u) if x['risk_level'] in ('high','medium')]),'scam_alerts':len([x for x in analyses if x.risk_level in ('HIGH','CRITICAL')]),'total_spending':expense,'detected_anomalies':len(scan(db,u)),'open_incidents':len([x for x in incidents if x.status!='RESOLVED']),'simulation':True}
+
+@router.get('/financial-insights')
+def financial_insights(db:Session=Depends(get_db),u:User=Depends(current_user)):return {'summary':summary(db,u),'forecast':predict(db,u),'notice':'Forecasts are estimates based on available historical activity.'}
