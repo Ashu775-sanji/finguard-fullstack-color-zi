@@ -4,7 +4,9 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.config import settings
 from app.database.core import Base,engine
 from app.api.routes import router
+from app.database.seed import seed_demo_data
 Base.metadata.create_all(bind=engine)
+if settings.seed_demo:seed_demo_data()
 app=FastAPI(title=settings.app_name,version='1.0.0',docs_url='/docs' if settings.environment!='production' else None)
 app.add_middleware(CORSMiddleware,allow_origins=[x.strip() for x in settings.allowed_origins.split(',')],allow_credentials=True,allow_methods=['*'],allow_headers=['Authorization','Content-Type'])
 app.add_middleware(TrustedHostMiddleware,allowed_hosts=['*'] if settings.environment!='production' else ['api.finguard.app'])

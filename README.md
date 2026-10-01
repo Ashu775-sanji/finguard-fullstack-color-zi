@@ -39,3 +39,9 @@ Open `http://localhost:5173`. The UI ships with realistic demo data; set `VITE_A
 - Rate-limiting/revocation hooks are documented for Redis-backed production deployment
 
 Run `pytest backend/tests` and `npm run build` before deployment.
+
+## Gemini financial copilot
+
+FinGuard AI is implemented server-side through FastAPI. It retrieves the authenticated user's transaction summary, category and merchant totals, budgets, goals, recent activity, and Guard Score before requesting a response from Gemini. The integration uses low-temperature grounded prompting, bounded conversation history, source labels, retry handling, a fallback Gemini model, and a deterministic financial fallback.
+
+Set `GEMINI_API_KEY` in the backend environment. Never place it in the Vite frontend. A `render.yaml` blueprint is included for a free Render web service and PostgreSQL deployment.

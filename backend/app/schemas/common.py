@@ -7,3 +7,9 @@ class TransactionCreate(BaseModel):amount:float=Field(gt=0,le=1_000_000_000);tra
 class TransactionOut(TransactionCreate):model_config=ConfigDict(from_attributes=True);id:str;created_at:datetime
 class BudgetCreate(BaseModel):category:str;limit:float=Field(gt=0);start_date:date;end_date:date
 class GoalCreate(BaseModel):name:str;target_amount:float=Field(gt=0);current_amount:float=Field(0,ge=0);deadline:date
+class AIHistoryItem(BaseModel):
+ role:str=Field(pattern='^(user|assistant)$');content:str=Field(min_length=1,max_length=2000)
+class AIAsk(BaseModel):
+ question:str=Field(min_length=2,max_length=1000);history:list[AIHistoryItem]=Field(default_factory=list,max_length=12)
+class AIAnswer(BaseModel):
+ answer:str;sources:list[str];grounded_transactions:int;model:str

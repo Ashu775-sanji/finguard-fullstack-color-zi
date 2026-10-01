@@ -1,4 +1,5 @@
 from datetime import date
+from collections import defaultdict
 from fastapi import APIRouter,Depends,HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select,func
@@ -8,6 +9,8 @@ from app.models.entities import User,Transaction,Budget,Goal,TxType
 from app.schemas.common import *
 from app.security.auth import *
 from app.ml.engine import detect,forecast,guard_score
+from app.services.gemini import generate_financial_answer
+from app.config import settings
 router=APIRouter(prefix='/api/v1')
 @router.post('/auth/register',response_model=UserOut,status_code=201)
 def register(body:UserCreate,db:Session=Depends(get_db)):
@@ -61,15 +64,43 @@ def recurring(db:Session=Depends(get_db),u:User=Depends(current_user)):
  for x in rows:groups.setdefault(x.merchant.lower(),[]).append(x)
  found=[{'merchant':v[0].merchant,'estimated_monthly':round(sum(x.amount for x in v)/len(v),2),'occurrences':len(v)} for v in groups.values() if len(v)>=2]
  return {'items':found,'monthly_total':round(sum(x['estimated_monthly'] for x in found),2)}
-@router.post('/ai/ask')
-def ask_ai(body:dict,db:Session=Depends(get_db),u:User=Depends(current_user)):
- q=str(body.get('question','')).lower();rows=db.scalars(select(Transaction).where(Transaction.user_id==u.id)).all();expenses=[x for x in rows if x.transaction_type==TxType.expense]
- if 'biggest' in q and expenses:
-  x=max(expenses,key=lambda z:z.amount);answer=f'Your biggest expense was {x.merchant} at {x.amount:.2f} {u.currency}.'
- elif 'food' in q:answer=f'You spent {sum(x.amount for x in expenses if x.category.lower()=="food"):.2f} {u.currency} on food.'
- elif 'unusual' in q or 'anomal' in q:answer='I scanned recent transactions using Z-score, Isolation Forest and Local Outlier Factor. Open Anomaly Center for the ranked results.'
- else:answer='Your strongest opportunity is budget adherence. Shopping and food are the largest variable categories this period.'
- return {'answer':answer,'grounded_transactions':len(rows)}
+@router.post('/ai/ask',response_model=AIAnswer)
+async def ask_ai(body:AIAsk,db:Session=Depends(get_db),u:User=Depends(current_user)):
+ rows=list(db.scalars(select(Transaction).where(Transaction.user_id==u.id).order_by(Transaction.date.desc()).limit(250)).all())
+ income=sum(float(x.amount) for x in rows if x.transaction_type==TxType.income)
+ expenses=sum(float(x.amount) for x in rows if x.transaction_type==TxType.expense)
+ categories=defaultdict(float);merchants=defaultdict(float)
+ for x in rows:
+  if x.transaction_type==TxType.expense:
+   categories[x.category]+=float(x.amount);merchants[x.merchant]+=float(x.amount)
+ top_categories=sorted(categories.items(),key=lambda x:x[1],reverse=True)[:6]
+ top_merchants=sorted(merchants.items(),key=lambda x:x[1],reverse=True)[:6]
+ recent=[f'{x.date}: {x.merchant} | {x.category} | {x.transaction_type.value} | {x.amount:.2f}' for x in rows[:12]]
+ budgets=list(db.scalars(select(Budget).where(Budget.user_id==u.id)).all())
+ goals=list(db.scalars(select(Goal).where(Goal.user_id==u.id)).all())
+ health=guard_score(income,expenses)
+ context='\n'.join([
+  f'Currency: {u.currency}',f'Income total: {income:.2f}',f'Expense total: {expenses:.2f}',f'Balance: {income-expenses:.2f}',
+  f'Guard score: {health["guard_score"]}; savings rate: {health["savings_rate"]}%',
+  'Top expense categories: '+(', '.join(f'{k}: {v:.2f}' for k,v in top_categories) or 'none'),
+  'Top merchants: '+(', '.join(f'{k}: {v:.2f}' for k,v in top_merchants) or 'none'),
+  'Budgets: '+(', '.join(f'{x.category} limit {x.limit:.2f}, spent {x.spent:.2f}' for x in budgets[:8]) or 'none'),
+  'Goals: '+(', '.join(f'{x.name} {x.current_amount:.2f}/{x.target_amount:.2f}, deadline {x.deadline}' for x in goals[:8]) or 'none'),
+  'Recent transactions:',*recent
+ ])
+ sources=['transaction summary','category totals','merchant totals','Guard Score']
+ if budgets:sources.append('budgets')
+ if goals:sources.append('financial goals')
+ try:
+  answer,model=await generate_financial_answer(body.question,context,[x.model_dump() for x in body.history])
+ except Exception:
+  q=body.question.lower()
+  if 'biggest' in q and top_merchants:answer=f'Your largest merchant total is {top_merchants[0][0]} at {top_merchants[0][1]:.2f} {u.currency}.'
+  elif 'food' in q:answer=f'Your recorded Food spending is {categories.get("Food",0):.2f} {u.currency}.'
+  elif 'spending' in q or 'expense' in q:answer=f'Your recorded expenses total {expenses:.2f} {u.currency}. Your largest category is {top_categories[0][0] if top_categories else "not available"}.'
+  else:answer='I could not reach the AI model. Your financial summary is still available from the retrieved records.'
+  model='grounded-fallback'
+ return AIAnswer(answer=answer,sources=sources,grounded_transactions=len(rows),model=model)
 
 @router.get('/reports/monthly')
 def report(db:Session=Depends(get_db),u:User=Depends(current_user)):return {'period':date.today().strftime('%Y-%m'),'summary':summary(db,u),'generated_for':u.email}
