@@ -24,6 +24,8 @@ services:
         generateValue: true
       - key: ALLOWED_ORIGINS
         value: https://ashu775-sanji.github.io
+      - key: ALLOWED_HOSTS
+        value: "*.onrender.com"
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
