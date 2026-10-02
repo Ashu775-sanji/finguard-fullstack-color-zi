@@ -12,7 +12,7 @@ export default function LandingModern(){
   return <div className="modernLanding">
     <header className="landingNav">
       <Link to="/" className="landingLogo"><span><ShieldCheck/></span><b>FinGuard</b></Link>
-      <nav><a href="#platform">Platform</a><a href="#how">How it works</a><a href="#trust">Security</a><a href="#education">Education</a></nav>
+      <nav><a href="#platform">Platform</a><a href="#how">How it works</a><a href="#trust">Security</a><Link to="/login">Education</Link></nav>
       <div><Link to="/login" className="textLink">Sign in</Link><Link to="/login" className="landingCta">Analyze a scam <ArrowRight/></Link></div>
       <button aria-label="Open menu"><Menu/></button>
     </header>

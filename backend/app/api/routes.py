@@ -23,11 +23,17 @@ def login(form:OAuth2PasswordRequestForm=Depends(),db:Session=Depends(get_db)):
  return Token(access_token=create_token(u.id))
 @router.get('/users/me',response_model=UserOut)
 def me(u:User=Depends(current_user)):return u
+@router.post('/auth/change-password',status_code=204)
+def change_password(body:PasswordChange,db:Session=Depends(get_db),u:User=Depends(current_user)):
+ if not verify_password(body.current_password,u.password_hash):raise HTTPException(400,'Current password is incorrect')
+ if body.current_password==body.new_password:raise HTTPException(422,'New password must be different')
+ u.password_hash=hash_password(body.new_password);db.commit()
 @router.get('/transactions',response_model=list[TransactionOut])
 def list_tx(db:Session=Depends(get_db),u:User=Depends(current_user)):return db.scalars(select(Transaction).where(Transaction.user_id==u.id).order_by(Transaction.date.desc()).limit(200)).all()
 @router.post('/transactions',response_model=TransactionOut,status_code=201)
 def add_tx(body:TransactionCreate,db:Session=Depends(get_db),u:User=Depends(current_user)):
- try:t=Transaction(**body.model_dump(),transaction_type=TxType(body.transaction_type),user_id=u.id)
+ data=body.model_dump();raw_type=data.pop('transaction_type')
+ try:t=Transaction(**data,transaction_type=TxType(raw_type),user_id=u.id)
  except ValueError:raise HTTPException(422,'transaction_type must be income, expense or transfer')
  db.add(t);db.commit();db.refresh(t);return t
 @router.delete('/transactions/{tx_id}',status_code=204)
@@ -40,7 +46,19 @@ def summary(db:Session=Depends(get_db),u:User=Depends(current_user)):
  rows=db.execute(select(Transaction.transaction_type,func.sum(Transaction.amount)).where(Transaction.user_id==u.id).group_by(Transaction.transaction_type)).all();d={str(k.value):float(v or 0) for k,v in rows};income=d.get('income',0);expenses=d.get('expense',0);health=guard_score(income,expenses);return {'income':income,'expenses':expenses,'balance':income-expenses,**health}
 @router.get('/anomaly/scan')
 def scan(db:Session=Depends(get_db),u:User=Depends(current_user)):
- rows=db.scalars(select(Transaction).where(Transaction.user_id==u.id).order_by(Transaction.date)).all();h=[{'amount':x.amount,'category':x.category,'date':x.date,'transaction_type':x.transaction_type.value} for x in rows];return [{'transaction_id':x.id,**detect(x.amount,x.category,h[:-1])} for x in rows[-20:]]
+ rows=list(db.scalars(select(Transaction).where(Transaction.user_id==u.id).order_by(Transaction.date,Transaction.created_at)).all());out=[]
+ for idx,x in enumerate(rows[-20:],start=max(0,len(rows)-20)):
+  history=[{'amount':y.amount,'category':y.category,'date':y.date,'transaction_type':y.transaction_type.value} for y in rows[:idx]]
+  out.append({'transaction_id':x.id,'merchant':x.merchant,'amount':x.amount,'category':x.category,'date':x.date,**detect(x.amount,x.category,history)})
+ return out
+@router.post('/anomaly/evaluate')
+def evaluate_transaction(body:TransactionRiskRequest,db:Session=Depends(get_db),u:User=Depends(current_user)):
+ rows=list(db.scalars(select(Transaction).where(Transaction.user_id==u.id).order_by(Transaction.date)).all())
+ history=[{'amount':x.amount,'category':x.category,'date':x.date,'transaction_type':x.transaction_type.value} for x in rows]
+ result=detect(body.amount,body.category,history)
+ label='Potentially suspicious transaction' if result['risk_level']=='high' else 'Unusual transaction' if result['risk_level']=='medium' else 'Normal transaction pattern'
+ action='Pause and independently verify the recipient before paying.' if result['risk_level']=='high' else 'Review the details and confirm they match your intent.' if result['risk_level']=='medium' else 'No unusual pattern was detected by the current checks.'
+ return {**body.model_dump(),'classification':label,'recommended_action':action,**result,'verified_fraud':False}
 @router.get('/prediction/expenses')
 def predict(db:Session=Depends(get_db),u:User=Depends(current_user)):
  rows=db.scalars(select(Transaction).where(Transaction.user_id==u.id)).all();return forecast([{'amount':x.amount,'date':x.date,'transaction_type':x.transaction_type.value} for x in rows])

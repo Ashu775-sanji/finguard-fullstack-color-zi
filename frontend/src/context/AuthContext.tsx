@@ -1,8 +1,29 @@
-import {createContext,useContext,useMemo,useState,ReactNode} from 'react';
-import {api} from '../lib/api';
-type User={name:string,email:string};type Result=Promise<string|null>;type Auth={user:User|null;login:(e:string,p:string)=>Result;register:(n:string,e:string,p:string)=>Result;reset:(e:string,p:string)=>Result;logout:()=>void};
-const C=createContext<Auth>(null!);const USERS='fg_users',SESSION='fg_session';
-function records(){const raw=localStorage.getItem(USERS);if(raw)return JSON.parse(raw);const seed=[{name:'Demo User',email:'demo@finguard.app',password:'FinGuard@2026'}];localStorage.setItem(USERS,JSON.stringify(seed));return seed}
-async function backendLogin(email:string,password:string){const body=new URLSearchParams({username:email,password});const r=await api.post('/auth/login',body,{headers:{'Content-Type':'application/x-www-form-urlencoded'}});localStorage.setItem('fg_token',r.data.access_token)}
-export function AuthProvider({children}:{children:ReactNode}){const [user,setUser]=useState<User|null>(()=>{try{return JSON.parse(localStorage.getItem(SESSION)||'null')}catch{return null}});const value=useMemo<Auth>(()=>({user,login:async(email,password)=>{try{await backendLogin(email,password)}catch(e:any){if(e.response)return e.response?.data?.detail||'Invalid email or password';const x=records().find((u:any)=>u.email.toLowerCase()===email.toLowerCase()&&u.password===password);if(!x)return'Invalid email or password'}const local=records().find((u:any)=>u.email.toLowerCase()===email.toLowerCase());const s={name:local?.name||email.split('@')[0],email};localStorage.setItem(SESSION,JSON.stringify(s));setUser(s);return null},register:async(name,email,password)=>{try{await api.post('/auth/register',{name,email,password,currency:'INR',language:'en'});await backendLogin(email,password)}catch(e:any){if(e.response&&e.response.status!==404)return e.response?.data?.detail||'Could not create account';const all=records();if(all.some((u:any)=>u.email.toLowerCase()===email.toLowerCase()))return'Account already exists';all.push({name,email,password});localStorage.setItem(USERS,JSON.stringify(all))}const s={name,email};localStorage.setItem(SESSION,JSON.stringify(s));setUser(s);return null},reset:async(email,password)=>{const all=records(),x=all.find((u:any)=>u.email.toLowerCase()===email.toLowerCase());if(!x)return'No local account found for this email';x.password=password;localStorage.setItem(USERS,JSON.stringify(all));return null},logout:()=>{localStorage.removeItem(SESSION);localStorage.removeItem('fg_token');setUser(null)}}),[user]);return <C.Provider value={value}>{children}</C.Provider>}
+import {createContext,useContext,useEffect,useMemo,useState,ReactNode} from 'react';
+import {api,apiError} from '../lib/api';
+type User={name:string,email:string};type Result=Promise<string|null>;
+type Auth={user:User|null;login:(e:string,p:string)=>Result;register:(n:string,e:string,p:string)=>Result;reset:(e:string,p:string)=>Result;logout:()=>void};
+const C=createContext<Auth>(null!);const SESSION='fg_session';
+
+async function backendLogin(email:string,password:string){
+  const body=new URLSearchParams({username:email,password});
+  const response=await api.post('/auth/login',body,{headers:{'Content-Type':'application/x-www-form-urlencoded'},timeout:60000});
+  if(!response.data?.access_token)throw new Error('Invalid token response');
+  sessionStorage.setItem('fg_token',response.data.access_token);
+  const me=await api.get('/users/me');
+  return {name:me.data.name,email:me.data.email} as User;
+}
+
+export function AuthProvider({children}:{children:ReactNode}){
+  const [user,setUser]=useState<User|null>(()=>{try{return JSON.parse(sessionStorage.getItem(SESSION)||'null')}catch{return null}});
+  const logout=()=>{sessionStorage.removeItem(SESSION);sessionStorage.removeItem('fg_token');setUser(null)};
+  useEffect(()=>{const handler=()=>logout();addEventListener('finguard:unauthorized',handler);return()=>removeEventListener('finguard:unauthorized',handler)},[]);
+  const value=useMemo<Auth>(()=>({
+    user,
+    login:async(email,password)=>{try{const current=await backendLogin(email,password);sessionStorage.setItem(SESSION,JSON.stringify(current));setUser(current);return null}catch(error){return apiError(error,'Invalid email or password')}},
+    register:async(name,email,password)=>{try{await api.post('/auth/register',{name,email,password,currency:'INR',language:'en'},{timeout:60000});const current=await backendLogin(email,password);sessionStorage.setItem(SESSION,JSON.stringify(current));setUser(current);return null}catch(error){return apiError(error,'Could not create the account')}},
+    reset:async()=>Promise.resolve('Secure email password recovery is not configured yet. Contact the project administrator.'),
+    logout
+  }),[user]);
+  return <C.Provider value={value}>{children}</C.Provider>
+}
 export const useAuth=()=>useContext(C);

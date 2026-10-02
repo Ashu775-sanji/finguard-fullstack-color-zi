@@ -6,6 +6,7 @@ import {
 import {useEffect,useState} from 'react';
 import {NavLink,Outlet,useLocation,useNavigate} from 'react-router-dom';
 import {useAuth} from '../context/AuthContext';
+import {api} from '../lib/api';
 
 const primary=[
   ['/app','Dashboard',LayoutDashboard],
@@ -26,6 +27,7 @@ export default function Layout(){
   const [open,setOpen]=useState(false);
   const [collapsed,setCollapsed]=useState(()=>localStorage.getItem('fg_sidebar')==='collapsed');
   const [notice,setNotice]=useState(false);
+  const [notifications,setNotifications]=useState<{type:string;message:string}[]>([]);
   const [theme,setTheme]=useState<'dark'|'light'>(()=>(localStorage.getItem('fg_theme') as 'dark'|'light')||'dark');
   const loc=useLocation(),go=useNavigate(),auth=useAuth();
   const all=[...primary,...secondary];
@@ -34,6 +36,7 @@ export default function Layout(){
   useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem('fg_theme',theme)},[theme]);
   useEffect(()=>{localStorage.setItem('fg_sidebar',collapsed?'collapsed':'open')},[collapsed]);
   useEffect(()=>setOpen(false),[loc.pathname]);
+  useEffect(()=>{api.get('/notifications').then(r=>setNotifications(r.data)).catch(()=>setNotifications([]))},[]);
 
   const links=(items:typeof primary|typeof secondary)=>items.map(([to,label,Icon])=>
     <NavLink to={to} end={to==='/app'} key={to} title={collapsed?label:undefined}>
@@ -72,14 +75,12 @@ export default function Layout(){
           <button aria-label={`Switch to ${theme==='dark'?'light':'dark'} mode`} onClick={()=>setTheme(theme==='dark'?'light':'dark')}>
             {theme==='dark'?<Sun/>:<Moon/>}
           </button>
-          <button aria-label="Notifications" className="bell" onClick={()=>setNotice(!notice)}><Bell/><i/></button>
+          <button aria-label="Notifications" className="bell" onClick={()=>setNotice(!notice)}><Bell/>{notifications.length>0&&<i/>}</button>
           <NavLink className="primary analyzeLink" to="/app/scam-analyzer">Analyze a scam</NavLink>
         </div>
         {notice&&<motion.div initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} className="headerPop noticePop">
-          <div className="popTitle"><b>Notifications</b><span>2 new</span></div>
-          <p><i className="riskDot high"/>Suspicious KYC message analyzed</p>
-          <p><i className="riskDot medium"/>One incident needs documentation</p>
-          <p><i className="riskDot low"/>Transaction monitoring is active</p>
+          <div className="popTitle"><b>Notifications</b><span>{notifications.length} items</span></div>
+          {notifications.length?notifications.map((x,i)=><p key={`${x.type}-${i}`}><i className={`riskDot ${x.type==='security'?'low':'medium'}`}/>{x.message}</p>):<p>No new notifications.</p>}
         </motion.div>}
       </header>
       <AnimatePresence mode="wait">
