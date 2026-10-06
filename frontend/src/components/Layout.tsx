@@ -33,7 +33,7 @@ export default function Layout(){
   const [scamText,setScamText]=useState('');
   const [scamResult,setScamResult]=useState<any>(null);
   const [scamLoading,setScamLoading]=useState(false);
-  const [notifications,setNotifications]=useState<{type:string;message:string}[]>([]);
+  const [notifications,setNotifications]=useState<{id:string;type:string;title:string;message:string;risk_level:string;is_read:boolean;created_at:string}[]>([]);
   const [theme,setTheme]=useState<'dark'|'light'>(()=>(localStorage.getItem('fg_theme') as 'dark'|'light')||'dark');
   const loc=useLocation(),go=useNavigate(),auth=useAuth();
   const all=[...primary,...secondary];
@@ -43,12 +43,14 @@ export default function Layout(){
   useEffect(()=>{localStorage.setItem('fg_sidebar',collapsed?'collapsed':'open')},[collapsed]);
   useEffect(()=>setOpen(false),[loc.pathname]);
   useEffect(()=>{api.get('/notifications').then(r=>setNotifications(r.data)).catch(()=>setNotifications([]))},[]);
+  const unread=notifications.filter(x=>!x.is_read).length;
+  async function markAllRead(){try{await api.post('/notifications/mark-all-read');setNotifications(items=>items.map(x=>({...x,is_read:true})))}catch{}}
   async function analyzeScam(){if(scamText.trim().length<3)return;setScamLoading(true);try{const r=await api.post('/scam/analyze',{text:scamText,url:null},{timeout:60000});setScamResult(r.data)}catch{setScamResult({risk_score:0,risk_level:'UNAVAILABLE',signals:[],recommended_actions:['Try again when the FinGuard analysis service is available.'],explanation:'The analysis service could not be reached.'})}finally{setScamLoading(false)}}
 
   const links=(items:readonly (readonly [string,string,any])[])=>items.map(([to,label,Icon])=>
     <NavLink to={to} end={to==='/dashboard'} key={to} title={collapsed?label:undefined}>
       <Icon size={19}/><span>{label}</span>
-      {label==='Alerts'&&<i>1</i>}
+      {label==='Alerts'&&unread>0&&<i>{unread}</i>}
     </NavLink>
   );
 
@@ -83,12 +85,13 @@ export default function Layout(){
           <button aria-label={`Switch to ${theme==='dark'?'light':'dark'} mode`} onClick={()=>setTheme(theme==='dark'?'light':'dark')}>
             {theme==='dark'?<Sun/>:<Moon/>}
           </button>
-          <button aria-label="Notifications" className="bell" onClick={()=>setNotice(!notice)}><Bell/>{notifications.length>0&&<i/>}</button>
+          <button aria-label={`Notifications${unread?`, ${unread} unread`:''}`} aria-expanded={notice} className="bell" onClick={()=>setNotice(!notice)}><Bell/>{unread>0&&<i/>}</button>
           <button className="primary analyzeLink" onClick={()=>setScamOpen(true)}>Analyze a scam</button>
         </div>
         {notice&&<motion.div initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} className="headerPop noticePop">
-          <div className="popTitle"><b>Notifications</b><span>{notifications.length} items</span></div>
-          {notifications.length?notifications.map((x,i)=><p key={`${x.type}-${i}`}><i className={`riskDot ${x.type==='security'?'low':'medium'}`}/>{x.message}</p>):<p>No new notifications.</p>}
+          <div className="popTitle"><b>Notifications</b><span>{unread} unread</span></div>
+          {notifications.length?notifications.map(x=><p key={x.id}><i className={`riskDot ${x.risk_level?.toLowerCase()||'medium'}`}/><span><b>{x.title}</b>{x.message}</span></p>):<p>No notifications yet.</p>}
+          {unread>0&&<button className="markRead" onClick={markAllRead}>Mark all as read</button>}
         </motion.div>}
       </header>
       <AnimatePresence mode="wait">

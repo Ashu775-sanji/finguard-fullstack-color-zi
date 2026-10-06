@@ -1,4 +1,8 @@
-export const isDemoMode=true;
+// One switch for deliberately simulated environments. Production falls back to
+// demo records only when an authenticated endpoint is empty or unavailable.
+export const isDemoMode=import.meta.env.VITE_DEMO_MODE==='true';
+
+export const demoUser={name:'FinGuard Demo',workspace:'Personal workspace',currency:'INR' as const};
 
 export type DemoTransaction={
   id:string;amount:number;transaction_type:'income'|'expense'|'transfer';category:string;
@@ -34,4 +38,24 @@ export const demoDashboard={
     {name:'Transfer',value:8500},{name:'Food',value:2680},{name:'Bills',value:2840},
     {name:'Shopping',value:2499},{name:'Travel',value:1252},{name:'Subscriptions',value:649},
   ],
+};
+
+export const demoAlerts=[
+  {id:'DEMO-ALERT-1',type:'security',title:'Potentially unusual payment',message:'An ₹8,500 payment to a new UPI recipient has elevated risk indicators.',risk_level:'HIGH',is_read:false,created_at:'2026-10-01T22:43:00Z'},
+  {id:'DEMO-ALERT-2',type:'spending',title:'Food spending increased',message:'Food spending is 32% above the previous month in this simulated dataset.',risk_level:'MEDIUM',is_read:false,created_at:'2026-10-01T10:00:00Z'},
+];
+
+export const demoInsights=[
+  {id:'DEMO-INSIGHT-1',title:'Food spending increased 32%',impact:2340,recommendation:'Reducing food-delivery spending by ₹1,000 could increase projected monthly savings.'},
+  {id:'DEMO-INSIGHT-2',title:'Recurring subscriptions',impact:2840,recommendation:'Review subscriptions you no longer use before the next billing cycle.'},
+];
+
+export const demoPredictions=[
+  {month_ahead:1,predicted:19100,lower:17400,upper:21100,confidence:.72,model:'DEMO ESTIMATE'},
+  {month_ahead:2,predicted:19600,lower:17600,upper:22000,confidence:.64,model:'DEMO ESTIMATE'},
+];
+
+export const demoReport={
+  period:'2026-10',income:61000,expenses:18420,balance:42580,savingsRate:69.8,
+  notice:'Simulated report generated from fictional demo records.',
 };
