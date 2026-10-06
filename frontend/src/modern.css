@@ -145,3 +145,25 @@ button,a,input,textarea,select{font-family:inherit}button,a{transition:color .18
 :root{--muted:#b4bed0;--muted-2:#98a5b9}
 :root[data-theme="light"]{--muted:#4b5568;--muted-2:#667085}
 .heroCopy>p{color:#c2cad8}.heroCopy>small{color:#aeb8c8;font-size:10px}.commandRisk small{color:#a5b0c2;font-size:10px}.commandRisk p,.commandRisk>div:last-child>span{color:#aeb8c8;font-size:10px}.commandCards article>span{color:#aeb8c8;font-size:10px}.commandCards p{color:#aeb8c8;font-size:10px}.aiStrip p,.aiStrip button{font-size:10px}.trustBar{color:#aeb8c8}.trustBar>span,.trustBar p{font-size:10px}.landingSectionTitle>span,.howSection>div>span,.trustSection>div>span{font-size:10px}.landingSectionTitle p{font-size:12px;color:#b5bfd0}.featureRail>article>span{font-size:10px;color:#a9b4c6}.featureRail p{font-size:12px;color:#b5bfd0}.featureRail a{font-size:10px}.howSection li i{font-size:10px}.howSection li p{font-size:12px;color:#b5bfd0}.trustSection p{color:#b5bfd0}.trustSection a{font-size:11px}.modernFooter p,.modernFooter a,.modernFooter>small{font-size:11px;color:#aeb8c8}.premiumShell input::placeholder,.premiumShell textarea::placeholder{color:#929eb2;opacity:1}
+
+/* Login uses the same premium visual system as the application shell. */
+.authPage{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(420px,.92fr);overflow:hidden;background:var(--canvas);color:var(--text)}
+.authPage:before{display:block;background:radial-gradient(circle at 78% 10%,rgba(124,140,255,.1),transparent 30%);opacity:1}
+.authPage .authGlow{display:block}.authPage .authGlow.g1{border-color:rgba(124,140,255,.13);box-shadow:0 0 0 70px rgba(124,140,255,.035),0 0 0 140px rgba(124,140,255,.02)}.authPage .authGlow.g2{background:rgba(52,211,153,.07)}
+.authPage .authStory{min-width:0;padding:48px clamp(34px,6vw,88px);border-right:1px solid var(--line);background:linear-gradient(90deg,rgba(5,8,14,.96) 0%,rgba(5,8,14,.82) 52%,rgba(5,8,14,.36) 100%),url('./assets/finguard-editorial.jpg') 66% center/cover;color:var(--text)}
+.authPage .authBrand>span,.authPage .authIcon{border-radius:12px;background:linear-gradient(135deg,#7486ff,#9480f4);color:#fff;box-shadow:0 10px 30px rgba(94,111,255,.22)}
+.authPage .authBrand b span{color:#aab5ff}.authPage .authKicker{color:#aab5ff}
+.authPage .authStory h1{max-width:680px;font:800 clamp(42px,4.9vw,70px)/1.02 Inter,system-ui,sans-serif;letter-spacing:-3.5px;text-transform:none;margin:24px 0;text-wrap:balance}
+.authPage .authStory h1 em{color:#9ba8ff;background:none}.authPage .authStory>div>p{max-width:610px;color:#d2d8e3;font-size:15px}
+.authPage .authProof span{color:#d6dce7}.authPage .authProof svg{color:var(--green)}
+.authPage .authPulse{border:1px solid var(--line-strong);border-radius:12px;background:rgba(12,17,28,.82);box-shadow:var(--shadow)}.authPage .authPulse small{color:#a6b0c2}
+.authPage .authPanel{position:relative;background:radial-gradient(circle at 100% 0,rgba(124,140,255,.08),transparent 34%),var(--canvas-2);padding:40px}
+.authPage .authPanel form,.authPage .authPanel form:hover{width:min(430px,100%);padding:38px;background:var(--surface);color:var(--text);border:1px solid var(--line-strong);border-radius:18px;box-shadow:var(--shadow);transform:none}
+.authPage .authPanel h2{font:800 30px/1.12 Inter,system-ui,sans-serif;letter-spacing:-1px;text-transform:none;margin:9px 0}.authPage .authPanel form>p{color:var(--muted);font-size:13px}
+.authPage .authPanel label{height:52px;border:1px solid var(--line-strong);border-radius:10px;background:var(--canvas);color:var(--muted)}.authPage .authPanel label:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.authPage .authPanel input{color:var(--text)}.authPage .authPanel input::placeholder{color:#929eb2;opacity:1}
+.authPage .authSubmit{border-radius:10px;background:linear-gradient(135deg,#7687ff,#8b7cf6)!important;color:#fff;box-shadow:0 10px 28px rgba(104,116,240,.2)!important}
+.authPage .forgot,.authPage .authSwitch button{color:#aeb8ff}.authPage .authSwitch{color:var(--muted);border-color:var(--line)}
+.authPage .authError{color:#fecaca;background:rgba(248,113,113,.11);border-color:rgba(248,113,113,.25)}.authPage .authSuccess{color:#a7f3d0;background:rgba(52,211,153,.1)}
+@media(max-width:900px){.authPage{grid-template-columns:1fr}.authPage .authStory{min-height:360px;padding:32px 26px;background-position:65% center}.authPage .authStory h1{font-size:46px;max-width:560px}.authPage .authPanel{padding:30px 18px 48px}.authPage .authPanel form{padding:30px}}
+@media(max-width:560px){.authPage .authStory{min-height:250px;padding:24px 20px;background:linear-gradient(90deg,rgba(5,8,14,.96),rgba(5,8,14,.52)),url('./assets/finguard-editorial.jpg') 68% center/cover}.authPage .authBrand>span{width:36px;height:36px}.authPage .authStory h1{font-size:34px;letter-spacing:-1.8px;margin:18px 0 10px}.authPage .authStory>div>p{font-size:12px;line-height:1.55}.authPage .authProof,.authPage .authPulse{display:none}.authPage .authPanel form{padding:24px 20px;border-radius:14px}.authPage .authPanel h2{font-size:26px}.authPage .authPanel{padding:20px 14px 36px}}

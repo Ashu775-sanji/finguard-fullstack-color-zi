@@ -21,9 +21,9 @@ export default function LandingModern(){
       <section className="modernHero">
         <div className="heroGrid"/>
         <motion.div className="heroCopy" initial={{opacity:0,y:18}} animate={{opacity:1,y:0}} transition={{duration:.55}}>
-          <span><i/>AI-POWERED FINANCIAL SAFETY</span>
-          <h1>Your financial safety layer <em>against scams.</em></h1>
-          <p>Detect suspicious activity, understand financial risks and know what to do next — powered by explainable AI.</p>
+          <span><i/>AI-POWERED FINANCIAL SAFETY + EXPENSE INTELLIGENCE</span>
+          <h1>Detect scams. Understand your spending. <em>Protect your money.</em></h1>
+          <p>Monitor financial risk, identify unusual transactions, estimate upcoming expenses and turn complex signals into clear next steps.</p>
           <div><Link to="/login" className="landingCta">Analyze a scam <ArrowRight/></Link><a href="#platform" className="secondaryLanding">Explore FinGuard <ChevronRight/></a></div>
           <small><ShieldCheck/>No bank credentials required <i/> Explainable risk signals <i/> Calm incident guidance</small>
         </motion.div>
@@ -59,6 +59,6 @@ export default function LandingModern(){
         <div><span>TRUST BY DESIGN</span><h2>Guidance, not fear.</h2><p>FinGuard does not impersonate banks or authorities, never asks for secret banking credentials and never claims it can directly recover stolen funds.</p><Link to="/login">Enter your secure workspace <ArrowRight/></Link></div>
       </section>
     </main>
-    <footer className="modernFooter"><div className="landingLogo"><span><ShieldCheck/></span><b>FinGuard</b></div><p>Detect scams. Protect your money. Know what to do next.</p><div><a href="#platform">Platform</a><a href="#trust">Security</a><Link to="/login">Sign in</Link></div><small>© 2026 FinGuard · Built by VOID Developer Team</small></footer>
+    <footer className="modernFooter"><div className="landingLogo"><span><ShieldCheck/></span><b>FinGuard</b></div><p>Detect scams. Understand your spending. Protect your money.</p><div><a href="#platform">Platform</a><a href="#trust">Security</a><Link to="/login">Sign in</Link></div><small>© 2026 FinGuard · Built by VOID Developer Team</small></footer>
   </div>
 }
