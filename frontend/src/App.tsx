@@ -18,6 +18,7 @@ function Loading(){return <div className="routeLoading" role="status"><i/><span>
 
 export default function App(){return <Suspense fallback={<Loading/>}><Routes>
   <Route index element={<Landing/>}/><Route path="login" element={<Login/>}/>
+  <Route path="dashboard" element={<Guard/>}><Route index element={<Dashboard/>}/></Route>
   <Route path="app" element={<Guard/>}>
     <Route index element={<Dashboard/>}/>
     <Route path="scam-analyzer" element={<ScamAnalyzer/>}/><Route path="transaction-monitor" element={<TransactionMonitor/>}/>
