@@ -1,14 +1,12 @@
 import {motion} from 'framer-motion';
 import {AlertTriangle,ArrowDownRight,ArrowUpRight,CheckCircle2,ChevronRight,MessageSquareWarning,RefreshCw,ShieldCheck,WalletCards} from 'lucide-react';
 import {useEffect,useMemo,useState} from 'react';
-import {Area,AreaChart,CartesianGrid,Pie,PieChart,ResponsiveContainer,Tooltip,XAxis} from 'recharts';
+import {Area,AreaChart,CartesianGrid,Cell,Pie,PieChart,ResponsiveContainer,Tooltip,XAxis} from 'recharts';
 import {NavLink} from 'react-router-dom';
 import {useAuth} from '../context/AuthContext';
 import {apiError,getData} from '../lib/api';
 import {money} from '../components/UI';
 import {demoDashboard,demoFinancialScore,demoTransactions} from '../lib/demoData';
-
-const distribution=[{name:'Low',value:76,fill:'#34d399'},{name:'Medium',value:16,fill:'#facc15'},{name:'High',value:6,fill:'#fb923c'},{name:'Critical',value:2,fill:'#f87171'}];
 
 function Metric({label,value,detail,tone='neutral',icon:Icon}:{label:string,value:string,detail:string,tone?:string,icon:any}){
   return <motion.article whileHover={{y:-2}} transition={{duration:.18}} className={`premiumMetric ${tone}`}>
@@ -25,6 +23,7 @@ export default function PremiumDashboard(){
   const [transactions,setTransactions]=useState<any[]>([]);
   const [error,setError]=useState('');
   const [demo,setDemo]=useState(false);
+  const [period,setPeriod]=useState('30D');
   async function load(){setLoading(true);setError('');try{const [s,d,t]=await Promise.all([getData<any>('/analytics/summary'),getData<any>('/dashboard'),getData<any[]>('/transactions')]);setSummary(s);setDashboard(d);if(t.length){setTransactions(t);setDemo(false)}else{setTransactions(demoTransactions);setDemo(true)}}catch(e){setTransactions(demoTransactions);setDemo(true);setError(`${apiError(e)} Showing clearly labeled demo data instead.`)}finally{setLoading(false)}}
   useEffect(()=>{load()},[]);
   const score=demo?demoFinancialScore.score:summary.guard_score;
@@ -33,6 +32,8 @@ export default function PremiumDashboard(){
   const trend=useMemo(()=>{const m=new Map<string,number>();transactions.filter(x=>x.transaction_type==='expense').forEach(x=>{const k=String(x.date).slice(0,7);m.set(k,(m.get(k)||0)+Number(x.amount))});return [...m].sort((a,b)=>a[0].localeCompare(b[0])).slice(-6).map(([month,spend])=>({m:month.slice(5),spend}))},[transactions]);
   const recent=transactions.slice(0,4).map(x=>({merchant:x.merchant,meta:`${x.payment_method||x.category} · ${x.date}`,amount:x.transaction_type==='income'?x.amount:-x.amount,risk:x.description?.includes('SAMPLE DATA')?'Sample':'Recorded'}));
   const highestRisk=[...transactions].sort((a,b)=>(b.risk_score||0)-(a.risk_score||0))[0];
+  const categoryData=useMemo(()=>{if(demo)return demoDashboard.categoryBreakdown.map((x,i)=>({...x,fill:['#7c8cff','#34d399','#facc15','#fb923c','#a78bfa','#f87171'][i%6]}));const map=new Map<string,number>();transactions.filter(x=>x.transaction_type==='expense').forEach(x=>map.set(x.category,(map.get(x.category)||0)+Number(x.amount)));return [...map].map(([name,value],i)=>({name,value,fill:['#7c8cff','#34d399','#facc15','#fb923c','#a78bfa','#f87171'][i%6]}))},[transactions,demo]);
+  const categoryTotal=categoryData.reduce((sum,x)=>sum+x.value,0);
   if(loading)return <div className="dashboardSkeleton" aria-label="Loading dashboard">{Array.from({length:8},(_,i)=><i key={i}/>)}</div>;
 
   const greeting=new Date().getHours()<12?'Good morning':new Date().getHours()<18?'Good afternoon':'Good evening';
@@ -67,7 +68,7 @@ export default function PremiumDashboard(){
 
     <div className="dashboardGrid">
       <section className="premiumPanel trendPanel">
-        <div className="panelHead"><div><span>FINANCIAL ACTIVITY</span><h3>Spending and risk trend</h3></div><div className="legend"><i className="spend"/>Spending<i className="risk"/>Risk</div></div>
+        <div className="panelHead"><div><span>SPENDING OVERVIEW</span><h3>Spending trend</h3></div><div className="periodFilters">{['7D','30D','3M','6M','1Y'].map(x=><button className={period===x?'active':''} onClick={()=>setPeriod(x)} key={x}>{x}</button>)}</div></div>
         <ResponsiveContainer width="100%" height={280}>
           <AreaChart data={trend}>
             <defs><linearGradient id="spendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7c8cff" stopOpacity=".28"/><stop offset="1" stopColor="#7c8cff" stopOpacity="0"/></linearGradient></defs>
@@ -78,9 +79,9 @@ export default function PremiumDashboard(){
         </ResponsiveContainer>
       </section>
       <section className="premiumPanel distributionPanel">
-        <div className="panelHead"><div><span>RISK DISTRIBUTION</span><h3>Recent activity</h3></div></div>
-        <div className="donutWrap"><ResponsiveContainer width="100%" height={185}><PieChart><Pie data={distribution} dataKey="value" innerRadius={58} outerRadius={76} paddingAngle={3}/></PieChart></ResponsiveContainer><div><strong>82</strong><span>events</span></div></div>
-        <div className="riskLegend">{distribution.map(x=><p key={x.name}><i style={{background:x.fill}}/><span>{x.name}</span><b>{x.value}%</b></p>)}</div>
+        <div className="panelHead"><div><span>CATEGORY BREAKDOWN</span><h3>Where your money went</h3></div></div>
+        <div className="donutWrap"><ResponsiveContainer width="100%" height={185}><PieChart><Pie data={categoryData} dataKey="value" innerRadius={58} outerRadius={76} paddingAngle={3}>{categoryData.map(x=><Cell key={x.name} fill={x.fill}/>)}</Pie></PieChart></ResponsiveContainer><div><strong>{money(categoryTotal)}</strong><span>total</span></div></div>
+        <div className="riskLegend">{categoryData.slice(0,6).map(x=><p key={x.name}><i style={{background:x.fill}}/><span>{x.name}</span><b>{categoryTotal?Math.round(x.value/categoryTotal*100):0}%</b></p>)}</div>
       </section>
       <section className="premiumPanel activityPanel">
         <div className="panelHead"><div><span>TRANSACTION INTELLIGENCE</span><h3>Recent activity</h3></div><NavLink to="/app/transactions">View all</NavLink></div>
