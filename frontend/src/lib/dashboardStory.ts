@@ -10,12 +10,14 @@ export function dashboardFacts(rows:StoryTransaction[],demo:boolean,now=new Date
   const income=total(rows.filter(x=>x.transaction_type==='income'&&x.date.slice(0,7)===month));
   const spending=total(monthRows),priorSpending=total(priorRows);
   const categories=new Map<string,number>();monthRows.forEach(x=>categories.set(x.category,(categories.get(x.category)||0)+Number(x.amount)));
+  const previousCategories=new Map<string,number>();priorRows.forEach(x=>previousCategories.set(x.category,(previousCategories.get(x.category)||0)+Number(x.amount)));
+  const discretionaryGrowth=[...categories].filter(([name])=>['shopping','entertainment','subscriptions'].includes(name.toLowerCase())).map(([name,value])=>({name,value,previous:previousCategories.get(name)||0})).filter(x=>x.previous>0).map(x=>({...x,change:(x.value/x.previous-1)*100})).filter(x=>x.change>0).sort((a,b)=>b.change-a.change);
   const categoryData=[...categories].map(([name,value])=>({name,value})).sort((a,b)=>b.value-a.value);
   const risks=rows.filter(x=>['HIGH','CRITICAL'].includes((x.risk_level||'').toUpperCase())).sort((a,b)=>(b.risk_score||0)-(a.risk_score||0));
   const evaluated=rows.filter(x=>Number.isFinite(x.risk_score));
   const food=total(monthRows.filter(x=>x.category.toLowerCase()==='food'));
   const priorFood=total(priorRows.filter(x=>x.category.toLowerCase()==='food'));
-  return {anchor,month,previous,monthRows,income,spending,priorSpending,food,priorFood,categoryData,risks,evaluated,
+  return {anchor,month,previous,monthRows,income,spending,priorSpending,food,priorFood,categoryData,risks,evaluated,fastestDiscretionary:discretionaryGrowth[0]??null,
     spendingChange:priorSpending>0&&monthRows.length>0?(spending/priorSpending-1)*100:null,
     foodChange:priorFood>0&&monthRows.some(x=>x.category.toLowerCase()==='food')?(food/priorFood-1)*100:null,
     surplus:income>0?Math.max(0,income-spending):null,

@@ -1,13 +1,13 @@
-import {AnimatePresence,motion} from 'framer-motion';
+import {AnimatePresence,motion,useReducedMotion} from 'framer-motion';
 import {
   BarChart3,Bell,BookOpen,ChevronLeft,ChevronRight,FileWarning,LayoutDashboard,
   Menu,MessageSquareWarning,Moon,ReceiptText,Settings,ShieldCheck,Sun,Vault,X
 } from 'lucide-react';
-import {useEffect,useState} from 'react';
+import {lazy,Suspense,useEffect,useRef,useState} from 'react';
 import {NavLink,Outlet,useLocation,useNavigate} from 'react-router-dom';
 import {useAuth} from '../context/AuthContext';
 import {api} from '../lib/api';
-import Drawer from './Drawer';
+const ScamAnalysisDrawer=lazy(()=>import('./ScamAnalysisDrawer'));
 
 const primary=[
   ['/dashboard','Dashboard',LayoutDashboard],
@@ -22,17 +22,18 @@ const secondary=[
   ['/app/transaction-monitor','Activity Monitor',ShieldCheck],
   ['/app/evidence','Evidence vault',Vault],
   ['/app/assistant','Fin AI',MessageSquareWarning],
+  ['/app/forecasts','Predictions',BarChart3],
 ] as const;
 
 export default function Layout(){
+  const navigation=useRef<HTMLElement>(null),reducedMotion=useReducedMotion();
   const [open,setOpen]=useState(false);
   const [collapsed,setCollapsed]=useState(()=>localStorage.getItem('fg_sidebar')==='collapsed');
   const [notice,setNotice]=useState(false);
   const [profileOpen,setProfileOpen]=useState(false);
   const [scamOpen,setScamOpen]=useState(false);
-  const [scamText,setScamText]=useState('');
-  const [scamResult,setScamResult]=useState<any>(null);
-  const [scamLoading,setScamLoading]=useState(false);
+  const [scamHasOpened,setScamHasOpened]=useState(false);
+  useEffect(()=>{if(scamOpen)setScamHasOpened(true)},[scamOpen]);
   const [notifications,setNotifications]=useState<{id:string;type:string;title:string;message:string;risk_level:string;is_read:boolean;created_at:string}[]>([]);
   const [theme,setTheme]=useState<'dark'|'light'>(()=>(localStorage.getItem('fg_theme') as 'dark'|'light')||'dark');
   const loc=useLocation(),go=useNavigate(),auth=useAuth();
@@ -42,10 +43,18 @@ export default function Layout(){
   useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem('fg_theme',theme)},[theme]);
   useEffect(()=>{localStorage.setItem('fg_sidebar',collapsed?'collapsed':'open')},[collapsed]);
   useEffect(()=>setOpen(false),[loc.pathname]);
+  useEffect(()=>{
+    if(!open)return;
+    const previous=document.activeElement as HTMLElement|null,overflow=document.body.style.overflow;document.body.style.overflow='hidden';
+    const frame=requestAnimationFrame(()=>navigation.current?.querySelector<HTMLElement>('.close')?.focus());
+    const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();setOpen(false)}if(e.key==='Tab'&&navigation.current){const items=[...navigation.current.querySelectorAll<HTMLElement>('a[href],button:not([disabled])')].filter(x=>x.getClientRects().length);const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}}};
+    document.addEventListener('keydown',key);return()=>{cancelAnimationFrame(frame);document.removeEventListener('keydown',key);document.body.style.overflow=overflow;if(previous?.isConnected)previous.focus({preventScroll:true})};
+  },[open]);
   useEffect(()=>{api.get('/notifications').then(r=>setNotifications(r.data)).catch(()=>setNotifications([]))},[]);
+  useEffect(()=>{const openAnalyzer=()=>setScamOpen(true);addEventListener('finguard:open-scam-analyzer',openAnalyzer);return()=>removeEventListener('finguard:open-scam-analyzer',openAnalyzer)},[]);
   const unread=notifications.filter(x=>!x.is_read).length;
   async function markAllRead(){try{await api.post('/notifications/mark-all-read');setNotifications(items=>items.map(x=>({...x,is_read:true})))}catch{}}
-  async function analyzeScam(){if(scamText.trim().length<3)return;setScamLoading(true);try{const r=await api.post('/scam/analyze',{text:scamText,url:null},{timeout:60000});setScamResult(r.data)}catch{setScamResult({risk_score:0,risk_level:'UNAVAILABLE',signals:[],recommended_actions:['Try again when the FinGuard analysis service is available.'],explanation:'The analysis service could not be reached.'})}finally{setScamLoading(false)}}
+
 
   const links=(items:readonly (readonly [string,string,any])[])=>items.map(([to,label,Icon])=>
     <NavLink to={to} end={to==='/dashboard'} key={to} title={collapsed?label:undefined}>
@@ -55,15 +64,15 @@ export default function Layout(){
   );
 
   return <div className={`shell premiumShell ${collapsed?'sidebarCollapsed':''}`}>
-    <aside className={open?'open':''} aria-label="Primary navigation">
+    <aside ref={navigation} className={open?'open':''} aria-label="Primary navigation">
       <div className="brand premiumBrand">
         <div className="mark"><ShieldCheck/></div>
         <div className="brandCopy"><b>FinGuard</b><small>Financial safety</small></div>
         <button className="close" aria-label="Close navigation" onClick={()=>setOpen(false)}><X/></button>
       </div>
-      <div className="secure premiumStatus"><i/><div><b>FinGuard analysis active</b><small>Transaction analysis ready</small></div></div>
-      <nav><div className="navLabel">OVERVIEW</div>{links(primary.slice(0,1))}<div className="navLabel">SECURITY</div>{links(primary.slice(1,5))}{links(secondary.slice(1,2))}<div className="navLabel">INTELLIGENCE</div>{links(primary.slice(5,6))}{links([secondary[0],secondary[2]])}<div className="navLabel">LEARN</div>{links(primary.slice(6))}</nav>
-      <div className="asideBottom">
+      <div className="secure premiumStatus"><i/><div><b>FinGuard workspace</b><small>Recorded and sample activity</small></div></div>
+      <nav><div className="navLabel">OVERVIEW</div>{links(primary.slice(0,1))}<div className="navLabel">SECURITY</div>{links(primary.slice(1,5))}{links(secondary.slice(1,2))}<div className="navLabel">INTELLIGENCE</div>{links(primary.slice(5,6))}{links([secondary[3],secondary[0],secondary[2]])}<div className="navLabel">LEARN</div>{links(primary.slice(6))}</nav>
+      <div className="asideBottom"><div className="navLabel">SYSTEM</div>
         <NavLink className="settingsLink" to="/app/settings"><Settings size={19}/><span>Settings</span></NavLink>
         <div className="profile">
           <div className="avatar">{auth.user?.name.split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase()}</div>
@@ -96,20 +105,14 @@ export default function Layout(){
       </header>
       <AnimatePresence mode="wait">
         <motion.div key={loc.pathname} className="routeMotion premiumRoute"
-          initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-4}}
-          transition={{duration:.2,ease:[.22,1,.36,1]}}>
+          initial={reducedMotion?false:{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={reducedMotion?{opacity:0}:{opacity:0,y:-4}}
+          transition={{duration:reducedMotion?0:.2,ease:[.22,1,.36,1]}}>
           <Outlet/>
         </motion.div>
       </AnimatePresence>
     </main>
     {open&&<div className="scrim" onClick={()=>setOpen(false)}/>}
-    <Drawer open={scamOpen} onClose={()=>{setScamOpen(false);setScamResult(null)}} title="Analyze with FinGuard AI" subtitle="Paste a suspicious message, transaction, link, call or payment request. Never include OTPs, PINs, CVVs or passwords.">
-      <div className="analysisKinds"><span>💬 Message</span><span>💳 Transaction</span><span>🔗 Link</span><span>📞 Call / request</span></div>
-      <label className="drawerField">What would you like FinGuard to analyze?<textarea value={scamText} onChange={e=>setScamText(e.target.value)} maxLength={6000} placeholder="Paste suspicious content or describe the request."/></label>
-      <button className="primary drawerPrimary" onClick={analyzeScam} disabled={scamLoading||scamText.trim().length<3}>{scamLoading?'Analyzing risk indicators…':'Analyze with FinGuard AI'}</button>
-      {scamResult&&<div className="globalScamResult"><span>RISK SCORE</span><strong>{scamResult.risk_score??0} / 100</strong><h3>{scamResult.risk_level} RISK</h3><p>{scamResult.explanation||'Potential risk indicators were evaluated based on the available information.'}</p>{scamResult.signals?.length>0&&<ul>{scamResult.signals.map((x:string)=><li key={x}>{x}</li>)}</ul>}<b>Recommended actions</b><ol>{(scamResult.recommended_actions||[]).slice(0,5).map((x:string)=><li key={x}>{x}</li>)}</ol></div>}
-      <p className="analysisDisclaimer">FinGuard provides informational risk analysis and cannot guarantee that a message, transaction or request is fraudulent.</p>
-    </Drawer>
+    {(scamOpen||scamHasOpened)&&<Suspense fallback={<div className="drawerModuleLoading" role="status">Opening analyzer…</div>}><ScamAnalysisDrawer open={scamOpen} onClose={()=>setScamOpen(false)}/></Suspense>}
     <nav className="mobileDock" aria-label="Mobile navigation">
       {primary.slice(0,5).map(([to,label,Icon])=><NavLink to={to} end={to==='/dashboard'} key={to}><Icon/><span>{label}</span></NavLink>)}
     </nav>

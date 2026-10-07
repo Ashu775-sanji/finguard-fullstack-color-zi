@@ -25,12 +25,15 @@ api.interceptors.response.use(
 );
 
 export function apiError(error:unknown,fallback='Something went wrong. Please try again.'){
-  const e=error as AxiosError<{detail?:string}>;
+  const e=error as AxiosError<{detail?:string|{msg?:string}[]}>;
   if(e.code==='ECONNABORTED')return 'The service is taking longer than expected. Render may be waking up—please try again.';
   if(!e.response)return 'FinGuard could not reach the API. Check your connection and try again.';
   if(e.response.status===429)return 'Too many requests. Please wait a moment and try again.';
   if(e.response.status>=500)return 'The FinGuard service is temporarily unavailable. Please try again shortly.';
-  return e.response.data?.detail||fallback;
+  const detail=e.response.data?.detail;
+  if(typeof detail==='string')return detail;
+  if(Array.isArray(detail))return detail.map((item:{msg?:string})=>item.msg||'Invalid input').join('. ');
+  return fallback;
 }
 
 export async function getData<T>(url:string):Promise<T>{
