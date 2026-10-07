@@ -1,0 +1,93 @@
+/* Original FinGuard art. Background paint only: no overlays above controls,
+   added stacking contexts, fixed attachments, motion, or layout changes. */
+:root{
+  --fg-network-art:url('./assets/backgrounds/signal-network.webp');
+  --fg-ribbon-art:url('./assets/backgrounds/clarity-ribbons.webp');
+  --fg-art-solid:#080c14;
+  --fg-art-veil:rgba(8,12,20,.96);
+  --fg-art-edge:rgba(8,12,20,.76);
+}
+[data-theme="light"]{
+  --fg-art-solid:#f5f7fc;
+  --fg-art-veil:rgba(245,247,252,.98);
+  --fg-art-edge:rgba(245,247,252,.94);
+}
+/* Public story: generous negative space, distinct visual chapters. */
+.modernLanding main>section,.modernLanding .storyChapters>article,.modernFooter{
+  --fg-scene:var(--fg-network-art);
+  background-image:linear-gradient(90deg,rgba(7,10,17,.95) 0%,rgba(7,10,17,.85) 45%,rgba(7,10,17,.53) 100%),var(--fg-scene);
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+}
+.modernLanding main>section:nth-child(even),.modernLanding .storyChapters>article:nth-child(even){--fg-scene:var(--fg-ribbon-art)}
+.modernLanding main>.cinematicHero{background-image:linear-gradient(90deg,rgba(7,10,17,.94) 0%,rgba(7,10,17,.8) 44%,rgba(7,10,17,.42) 100%),var(--fg-network-art)}
+.modernLanding main>.trustBar{background-image:linear-gradient(rgba(7,10,17,.95),rgba(7,10,17,.95)),var(--fg-network-art)}
+.modernLanding .storySequence{background-image:linear-gradient(rgba(7,10,17,.98),rgba(7,10,17,.98)),var(--fg-network-art)}
+/* Keep the sign-in form solid; artwork lives only behind its surrounding scene. */
+.authPage .authStory{background-image:linear-gradient(90deg,rgba(5,8,14,.95),rgba(5,8,14,.6)),var(--fg-network-art);background-size:cover;background-position:center}
+.authPage .authPanel{background-image:linear-gradient(90deg,var(--fg-art-veil),var(--fg-art-edge)),var(--fg-ribbon-art);background-size:cover;background-position:center}
+/* Authenticated pages: readable section headers and restrained panel texture. */
+.premiumShell .premiumRoute{
+  background-image:linear-gradient(180deg,transparent 0%,var(--canvas) 98%),linear-gradient(90deg,var(--fg-art-veil),var(--fg-art-edge)),var(--fg-network-art);
+  background-size:100% 720px;background-position:top right;background-repeat:no-repeat;
+}
+.premiumShell .pageIntro{
+  background-image:linear-gradient(90deg,var(--fg-art-veil),var(--fg-art-edge)),var(--fg-ribbon-art);
+  background-size:cover;background-position:right center;background-repeat:no-repeat;
+}
+.premiumShell .card.panel{
+  background-image:linear-gradient(90deg,var(--fg-art-veil),var(--fg-art-veil)),var(--fg-network-art);
+  background-size:cover;background-position:right center;background-repeat:no-repeat;
+}
+/* Ten dashboard chapters alternate signal / clarity art. Data remains foreground. */
+.intelligenceCommand>section[data-story-step]{
+  --fg-scene:var(--fg-network-art);
+  background-image:linear-gradient(90deg,var(--fg-art-veil) 0%,var(--fg-art-veil) 48%,var(--fg-art-edge) 100%),var(--fg-scene);
+  background-size:cover;background-position:right center;background-repeat:no-repeat;
+}
+.intelligenceCommand>section[data-story-step]:nth-of-type(even){--fg-scene:var(--fg-ribbon-art)}
+.intelligenceCommand>.commandHero[data-story-step]{
+  --fg-art-state:rgba(124,140,255,.14);
+  background-image:radial-gradient(circle at 78% 42%,var(--fg-art-state),transparent 38%),linear-gradient(90deg,rgba(8,12,20,.94),rgba(8,12,20,.55)),var(--fg-network-art);
+}
+.intelligenceCommand.score-neutral>.commandHero{--fg-art-state:rgba(230,183,115,.13)}
+.intelligenceCommand.score-warning>.commandHero{--fg-art-state:rgba(251,146,60,.16)}
+.intelligenceCommand.score-risk>.commandHero{--fg-art-state:rgba(233,120,130,.17)}
+.intelligenceCommand>.finRecommendation[data-story-step]{
+  background-image:linear-gradient(90deg,rgba(14,20,34,.96),rgba(14,20,34,.72)),var(--fg-ribbon-art);
+}
+.intelligenceCommand>.recentLedger,.intelligenceCommand>.spendingStory{
+  --fg-art-edge:rgba(8,12,20,.92);
+}
+[data-theme="light"] .intelligenceCommand>.recentLedger,[data-theme="light"] .intelligenceCommand>.spendingStory{--fg-art-edge:rgba(245,247,252,.98)}
+/* Drawer bodies, forms, tables, chart surfaces and navigation remain unobscured. */
+.drawerLayer .appDrawer>header{
+  background-image:linear-gradient(90deg,rgba(11,15,24,.97),rgba(11,15,24,.9)),var(--fg-network-art);
+  background-size:cover;background-position:right center;
+}
+@media(max-width:760px){
+  :root{--fg-network-art:url('./assets/backgrounds/signal-network-mobile.webp');--fg-ribbon-art:url('./assets/backgrounds/clarity-ribbons-mobile.webp')}
+  .modernLanding main>section,.modernLanding .storyChapters>article{background-position:65% center}
+  .intelligenceCommand>.commandHero[data-story-step]{background-position:70% center}
+}
+@media(forced-colors:active){
+  .modernLanding main>section,.modernLanding .storyChapters>article,.modernFooter,.authPage .authStory,.authPage .authPanel,.premiumShell .premiumRoute,.premiumShell .pageIntro,.premiumShell .card.panel,.intelligenceCommand>section[data-story-step],.drawerLayer .appDrawer>header{background-image:none!important}
+}
+/* Read-heavy surfaces stay opaque; their surrounding section still carries art. */
+.premiumShell .card.panel:has(.dataTable),.premiumShell .card.panel:has(.recharts-wrapper),.premiumShell .card.panel:has(.messages){background-image:none;background-color:var(--surface)}
+/* Signature experiences retain their established chapter/status colors. */
+.premiumShell .replayStage,.premiumShell .dropZone,.premiumShell .seasonHero{
+  --fg-chapter-veil:rgba(17,17,17,.9);
+  background-image:linear-gradient(90deg,var(--fg-chapter-veil),var(--fg-chapter-veil)),var(--fg-ribbon-art);
+  background-size:cover;background-position:right center;background-repeat:no-repeat;
+}
+.premiumShell .replayStage.blue,.premiumShell .dropZone.reading{--fg-chapter-veil:rgba(36,100,197,.96)}
+.premiumShell .replayStage.yellow,.premiumShell .dropZone{--fg-chapter-veil:rgba(255,202,58,.97)}
+.premiumShell .replayStage.coral,.premiumShell .dropZone.error{--fg-chapter-veil:rgba(255,91,53,.97)}
+.premiumShell .replayStage.cream{--fg-chapter-veil:rgba(244,241,232,.97)}
+.premiumShell .dropZone.done{--fg-chapter-veil:rgba(125,226,187,.97)}
+@media(forced-colors:active){.premiumShell .replayStage,.premiumShell .dropZone,.premiumShell .seasonHero{background-image:none!important}}
+/* Existing warm signature panels need dark foregrounds for readable contrast. */
+.premiumShell .dropZone,.premiumShell .replayStage.yellow,.premiumShell .replayStage.coral,.premiumShell .replayStage.cream{color:#141b2b}
+.premiumShell .dropZone.reading,.premiumShell .replayStage.blue,.premiumShell .replayStage.black{color:#fff}
