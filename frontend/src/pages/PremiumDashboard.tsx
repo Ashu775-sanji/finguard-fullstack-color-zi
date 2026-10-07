@@ -1,96 +1,76 @@
-import {motion} from 'framer-motion';
-import {AlertTriangle,ArrowDownRight,ArrowUpRight,CheckCircle2,ChevronRight,MessageSquareWarning,RefreshCw,ShieldCheck,WalletCards} from 'lucide-react';
+import {AnimatePresence,motion,useReducedMotion} from 'framer-motion';
+import {AlertTriangle,ArrowDownRight,ArrowRight,ArrowUpRight,BrainCircuit,Check,CheckCircle2,ChevronRight,MessageSquareWarning,RefreshCw,Send,ShieldCheck,Sparkles,WalletCards,X} from 'lucide-react';
 import {useEffect,useMemo,useState} from 'react';
-import {Area,AreaChart,CartesianGrid,Cell,Pie,PieChart,ResponsiveContainer,Tooltip,XAxis} from 'recharts';
+import {Area,AreaChart,CartesianGrid,ResponsiveContainer,Tooltip,XAxis} from 'recharts';
 import {NavLink} from 'react-router-dom';
 import {useAuth} from '../context/AuthContext';
-import {apiError,getData} from '../lib/api';
+import {api,apiError,getData} from '../lib/api';
 import {money} from '../components/UI';
+import Drawer from '../components/Drawer';
 import {demoDashboard,demoFinancialScore,demoTransactions} from '../lib/demoData';
 
-function Metric({label,value,detail,tone='neutral',icon:Icon}:{label:string,value:string,detail:string,tone?:string,icon:any}){
-  return <motion.article whileHover={{y:-2}} transition={{duration:.18}} className={`premiumMetric ${tone}`}>
-    <div><span>{label}</span><i><Icon/></i></div><strong>{value}</strong>
-    <small>{tone==='good'?<ArrowDownRight/>:<ArrowUpRight/>}{detail}</small>
-  </motion.article>
+function SnapshotMetric({label,value,detail,tone='neutral',icon:Icon}:{label:string,value:string,detail:string,tone?:string,icon:any}){
+  return <motion.div whileHover={{y:-2}} className={`snapshotMetric ${tone}`}><i><Icon/></i><div><strong>{value}</strong><span>{label}</span></div><small>{tone==='good'?<ArrowDownRight/>:<ArrowUpRight/>}{detail}</small></motion.div>
 }
 
 export default function PremiumDashboard(){
-  const auth=useAuth();
-  const [loading,setLoading]=useState(true);
+  const auth=useAuth(),reduceMotion=useReducedMotion();
+  const [loading,setLoading]=useState(true),[error,setError]=useState(''),[demo,setDemo]=useState(false),[period,setPeriod]=useState('30D');
   const [summary,setSummary]=useState({income:0,expenses:0,balance:0,guard_score:0,savings_rate:0});
   const [dashboard,setDashboard]=useState({scam_alerts:0,suspicious_transactions:0,total_spending:0,open_incidents:0});
-  const [transactions,setTransactions]=useState<any[]>([]);
-  const [error,setError]=useState('');
-  const [demo,setDemo]=useState(false);
-  const [period,setPeriod]=useState('30D');
+  const [transactions,setTransactions]=useState<any[]>([]),[selected,setSelected]=useState<any|null>(null);
+  const [scanActive,setScanActive]=useState(false),[insightIndex,setInsightIndex]=useState(0);
+  const [finOpen,setFinOpen]=useState(false),[finQ,setFinQ]=useState(''),[finReply,setFinReply]=useState(''),[finLoading,setFinLoading]=useState(false);
   async function load(){setLoading(true);setError('');try{const [s,d,t]=await Promise.all([getData<any>('/analytics/summary'),getData<any>('/dashboard'),getData<any[]>('/transactions')]);setSummary(s);setDashboard(d);if(t.length){setTransactions(t);setDemo(false)}else{setTransactions(demoTransactions);setDemo(true)}}catch(e){setTransactions(demoTransactions);setDemo(true);setError(`${apiError(e)} Showing clearly labeled demo data instead.`)}finally{setLoading(false)}}
   useEffect(()=>{load()},[]);
-  const score=demo?demoFinancialScore.score:summary.guard_score;
-  const risk=Math.max(0,100-score);
-  const riskLabel=score>=80?'GOOD':score>=60?'FAIR':'NEEDS ATTENTION';
+  useEffect(()=>{if(loading)return;setScanActive(true);const timer=setTimeout(()=>setScanActive(false),reduceMotion?100:1500);return()=>clearTimeout(timer)},[loading,reduceMotion]);
+  useEffect(()=>{if(reduceMotion)return;const timer=setInterval(()=>setInsightIndex(x=>(x+1)%4),5600);return()=>clearInterval(timer)},[reduceMotion]);
+
+  const score=demo?demoFinancialScore.score:summary.guard_score,risk=Math.max(0,100-score),riskLabel=score>=80?'GOOD':score>=60?'FAIR':'NEEDS ATTENTION';
+  const components=demo?demoFinancialScore.components:[{label:'Transaction Safety',value:score},{label:'Spending Control',value:Math.max(0,score-6)},{label:'Scam Exposure',value:Math.min(100,score+4)},{label:'Savings Discipline',value:Math.max(0,score-9)}];
   const trend=useMemo(()=>{const expenses=transactions.filter(x=>x.transaction_type==='expense');if(period==='7D'||period==='30D'){const days=period==='7D'?7:30,max=Math.max(...expenses.map(x=>new Date(x.date).getTime()),Date.now()),cutoff=max-days*86400000,m=new Map<string,number>();expenses.filter(x=>new Date(x.date).getTime()>=cutoff).forEach(x=>m.set(x.date,(m.get(x.date)||0)+Number(x.amount)));return [...m].sort((a,b)=>a[0].localeCompare(b[0])).map(([date,spend])=>({m:date.slice(5),spend}))}const months=period==='3M'?3:period==='6M'?6:12,m=new Map<string,number>();expenses.forEach(x=>{const k=String(x.date).slice(0,7);m.set(k,(m.get(k)||0)+Number(x.amount))});return [...m].sort((a,b)=>a[0].localeCompare(b[0])).slice(-months).map(([month,spend])=>({m:month.slice(5),spend}))},[transactions,period]);
-  const recent=transactions.slice(0,4).map(x=>({merchant:x.merchant,meta:`${x.payment_method||x.category} · ${x.date}`,amount:x.transaction_type==='income'?x.amount:-x.amount,risk:x.description?.includes('SAMPLE DATA')?'Sample':'Recorded'}));
-  const highestRisk=[...transactions].sort((a,b)=>(b.risk_score||0)-(a.risk_score||0))[0];
-  const categoryData=useMemo(()=>{if(demo)return demoDashboard.categoryBreakdown.map((x,i)=>({...x,fill:['#7c8cff','#34d399','#facc15','#fb923c','#a78bfa','#f87171'][i%6]}));const map=new Map<string,number>();transactions.filter(x=>x.transaction_type==='expense').forEach(x=>map.set(x.category,(map.get(x.category)||0)+Number(x.amount)));return [...map].map(([name,value],i)=>({name,value,fill:['#7c8cff','#34d399','#facc15','#fb923c','#a78bfa','#f87171'][i%6]}))},[transactions,demo]);
-  const categoryTotal=categoryData.reduce((sum,x)=>sum+x.value,0);
-  if(loading)return <div className="dashboardSkeleton" aria-label="Loading dashboard">{Array.from({length:8},(_,i)=><i key={i}/>)}</div>;
-
-  const greeting=new Date().getHours()<12?'Good morning':new Date().getHours()<18?'Good afternoon':'Good evening';
+  const categoryData=useMemo(()=>{if(demo)return demoDashboard.categoryBreakdown;const map=new Map<string,number>();transactions.filter(x=>x.transaction_type==='expense').forEach(x=>map.set(x.category,(map.get(x.category)||0)+Number(x.amount)));return [...map].map(([name,value])=>({name,value}))},[transactions,demo]);
+  const categoryTotal=categoryData.reduce((sum,x)=>sum+x.value,0),highestRisk=[...transactions].sort((a,b)=>(b.risk_score||0)-(a.risk_score||0))[0],focusRisk=transactions.find(x=>x.risk_level==='HIGH')||highestRisk;
   const balance=demo?demoDashboard.balance:summary.balance,spending=demo?demoDashboard.monthlySpending:dashboard.total_spending,savings=demo?demoDashboard.savings:Math.max(0,summary.balance);
-  return <div className="commandCenter">
-    <section className="dashboardWelcome">
-      <div><span className="sectionEyebrow"><i/>FINANCIAL SAFETY OVERVIEW</span><h2>{greeting}, {auth.user?.name.split(' ')[0]} 👋</h2><p>Here's your financial safety overview.</p></div>
-      <NavLink to="/app/scam-analyzer" className="primary"><MessageSquareWarning/>Analyze suspicious content</NavLink>
-    </section>
+  const insights=[
+    {kind:'SECURITY',title:'Potentially suspicious transaction detected.',detail:`${money(focusRisk?.amount||0)} · ${focusRisk?.risk_score||risk}/100 risk`,to:'/app/transaction-monitor',tone:'risk'},
+    {kind:'SPENDING',title:'Food spending increased 32%.',detail:'₹2,340 above the previous month in this demo view.',to:'/app/analytics',tone:'spending'},
+    {kind:'SAVINGS',title:'You saved 14% more than last month.',detail:`Available savings snapshot: ${money(savings)}.`,to:'/app/goals',tone:'safe'},
+    {kind:'PREDICTION',title:'Projected monthly spending',detail:`${money(Math.round(spending*1.08))} estimated from available activity.`,to:'/app/forecasts',tone:'prediction'},
+  ],activeInsight=insights[insightIndex];
+  async function askFinAI(question=finQ){const q=question.trim();if(!q||finLoading)return;setFinQ(q);setFinLoading(true);setFinReply('');if(demo){setTimeout(()=>{setFinReply('DEMO AI · This workspace is showing fictional records. Add or import authenticated transaction history for a grounded answer.');setFinLoading(false)},550);return}try{const r=await api.post('/ai/ask',{question:q,history:[]},{timeout:60000});setFinReply(r.data.answer)}catch(e){setFinReply(apiError(e,'Fin AI could not answer right now.'))}finally{if(!demo)setFinLoading(false)}}
+  if(loading)return <div className="dashboardSkeleton" aria-label="Loading dashboard">{Array.from({length:8},(_,i)=><i key={i}/>)}</div>;
+  const greeting=new Date().getHours()<12?'Good morning':new Date().getHours()<18?'Good afternoon':'Good evening';
+
+  return <div className={`intelligenceCommand score-${score>=80?'calm':score>=60?'neutral':score>=40?'warning':'risk'}`}>
     {error&&<div className="apiState errorState"><AlertTriangle/><div><b>Dashboard data is unavailable.</b><p>{error}</p></div><button onClick={load}><RefreshCw/>Try again</button></div>}
-    {demo&&<div className="sampleLabel"><span>DEMO DATA</span>Fictional, mathematically consistent records are shown and are not connected to a bank.</div>}
-
-    <div className="securityOverview">
-      <motion.section className="riskOverview" initial={{opacity:0,scale:.98}} animate={{opacity:1,scale:1}}>
-        <div className="riskCopy">
-          <span>FINANCIAL SAFETY SCORE</span><h3>{riskLabel}</h3>
-          <p>{demo?demoFinancialScore.explanation:'Based on available transaction activity, scam analyses and documented security events.'}</p>
-          <NavLink to="/app/analytics">View risk details <ChevronRight/></NavLink>
-        </div>
-        <div className="radialRisk safety" style={{'--risk':`${score}%`} as React.CSSProperties}>
-          <div><strong>{score}</strong><span>/ 100 · {riskLabel}</span></div>
-        </div>
-        <div className="scoreBreakdown">{(demo?demoFinancialScore.components:[{label:'Transaction Safety',value:score},{label:'Spending Control',value:Math.max(0,score-6)},{label:'Scam Exposure',value:Math.min(100,score+4)},{label:'Savings Discipline',value:Math.max(0,score-9)}]).map(x=><p key={x.label}><span>{x.label}</span><b>{x.value}</b></p>)}</div>
-      </motion.section>
-      <div className="dashboardMetrics">
-        <Metric label="Current balance" value={money(balance)} detail="4.2% vs last month" tone="good" icon={WalletCards}/>
-        <Metric label="Monthly spending" value={money(spending)} detail="8.4% vs last month" tone="good" icon={WalletCards}/>
-        <Metric label="Financial risk" value={`${risk}/100`} detail="Risk indicators" tone="attention" icon={AlertTriangle}/>
-        <Metric label="Savings" value={money(savings)} detail="6.8% vs last month" tone="good" icon={ShieldCheck}/>
+    <section className="commandHero">
+      <div className="heroNetwork" aria-hidden="true">{Array.from({length:14},(_,i)=><i key={i} style={{'--i':i} as React.CSSProperties}/>)}</div>
+      <div className="commandNarrative"><span className="sectionEyebrow"><i/>FINANCIAL SAFETY ENVIRONMENT</span><h2>{greeting}, {auth.user?.name.split(' ')[0]} 👋</h2><h3>Your financial safety is looking {score>=80?'good':'ready for review'}.</h3><p>{demo?demoFinancialScore.explanation:'Based on available transaction activity, scam analyses and documented security events.'}</p><div><NavLink to="/app/scam-analyzer" className="primary"><MessageSquareWarning/>Analyze suspicious content</NavLink><NavLink to="/app/analytics">Explore the score <ChevronRight/></NavLink></div>{demo&&<small><b>DEMO DATA</b> Fictional records · not connected to a bank</small>}</div>
+      <div className="heroShieldWorld" aria-label={`Financial safety score ${score} out of 100, ${riskLabel}`}>
+        <div className="commandOrbit o1"/><div className="commandOrbit o2"/>
+        <motion.div className="commandShield" animate={reduceMotion?{}:{y:[0,-7,0],rotateY:[-5,5,-5]}} transition={{duration:7,repeat:Infinity,ease:'easeInOut'}}><ShieldCheck/><strong>{score}</strong><span>/ 100 · {riskLabel}</span></motion.div>
+        {components.map((x,i)=><motion.div className={`scoreSatellite sat-${i+1}`} initial={reduceMotion?false:{opacity:0,scale:.9}} animate={{opacity:1,scale:1}} transition={{delay:.15+i*.09}} key={x.label}><span>{x.label}</span><b>{x.value}</b></motion.div>)}
+        <i className="txParticle safe p1">₹680</i><i className="txParticle review p2">₹{focusRisk?.amount?.toLocaleString('en-IN')||'14,500'}</i><i className="txParticle safe p3">₹2,499</i>
       </div>
-    </div>
+      <AnimatePresence>{scanActive&&<motion.div className="aiScanOverlay" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}><BrainCircuit/><div><b>FIN GUARD AI</b><span>Analyzing available financial activity…</span><p><Check/>Transaction patterns <Check/>Spending behavior <Check/>Risk indicators <Check/>Savings trends</p></div></motion.div>}</AnimatePresence>
+    </section>
 
-    <div className="dashboardGrid">
-      <section className="premiumPanel trendPanel">
-        <div className="panelHead"><div><span>SPENDING OVERVIEW</span><h3>Spending trend</h3></div><div className="periodFilters">{['7D','30D','3M','6M','1Y'].map(x=><button className={period===x?'active':''} onClick={()=>setPeriod(x)} key={x}>{x}</button>)}</div></div>
-        <ResponsiveContainer width="100%" height={280}>
-          <AreaChart data={trend}>
-            <defs><linearGradient id="spendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7c8cff" stopOpacity=".28"/><stop offset="1" stopColor="#7c8cff" stopOpacity="0"/></linearGradient></defs>
-            <CartesianGrid vertical={false} stroke="var(--chart-grid)"/><XAxis dataKey="m" axisLine={false} tickLine={false}/>
-            <Tooltip contentStyle={{background:'var(--raised)',border:'1px solid var(--line)',borderRadius:12}}/>
-            <Area type="monotone" dataKey="spend" stroke="#7c8cff" strokeWidth={2.4} fill="url(#spendFill)"/>
-          </AreaChart>
-        </ResponsiveContainer>
-      </section>
-      <section className="premiumPanel distributionPanel">
-        <div className="panelHead"><div><span>CATEGORY BREAKDOWN</span><h3>Where your money went</h3></div></div>
-        <div className="donutWrap"><ResponsiveContainer width="100%" height={185}><PieChart><Pie data={categoryData} dataKey="value" innerRadius={58} outerRadius={76} paddingAngle={3}>{categoryData.map(x=><Cell key={x.name} fill={x.fill}/>)}</Pie></PieChart></ResponsiveContainer><div><strong>{money(categoryTotal)}</strong><span>total</span></div></div>
-        <div className="riskLegend">{categoryData.slice(0,6).map(x=><p key={x.name}><i style={{background:x.fill}}/><span>{x.name}</span><b>{categoryTotal?Math.round(x.value/categoryTotal*100):0}%</b></p>)}</div>
-      </section>
-      <section className="premiumPanel activityPanel">
-        <div className="panelHead"><div><span>TRANSACTION INTELLIGENCE</span><h3>Recent activity</h3></div><NavLink to="/app/transactions">View all</NavLink></div>
-        <div className="activityRows">{recent.length?recent.map((x,i)=><div key={`${x.merchant}-${i}`}><span className={`merchantIcon ${x.risk.toLowerCase()}`}>{x.amount>0?<CheckCircle2/>:<WalletCards/>}</span><div><b>{x.merchant}</b><small>{x.meta}</small></div><strong className={x.amount>0?'positive':''}>{x.amount>0?'+':''}{money(x.amount)}</strong><em className={x.risk.toLowerCase()}>{x.risk}</em></div>):<p className="panelEmpty">No transactions yet.</p>}</div>
-      </section>
-      <section className="premiumPanel nextAction">
-        <span>RECOMMENDED NEXT STEP</span><ShieldCheck/><h3>{highestRisk?'Review a potentially unusual payment.':'Your activity is ready for review.'}</h3><p>{highestRisk?`${money(highestRisk.amount)} to ${highestRisk.merchant} has the strongest risk indicators in the available data.`:'Add or import transaction activity to receive contextual recommendations.'}</p>
-        <NavLink to="/app/transaction-monitor">Review transaction <ChevronRight/></NavLink>
-      </section>
-    </div>
+    <section className="floatingInsightZone" aria-live="polite"><AnimatePresence mode="wait"><motion.div key={insightIndex} className={`floatingInsight ${activeInsight.tone}`} initial={{opacity:0,y:12,scale:.98}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:-8}}><Sparkles/><div><small>FIN AI · {activeInsight.kind}{demo?' · SAMPLE ANALYSIS':''}</small><h3>{activeInsight.title}</h3><p>{activeInsight.detail}</p><NavLink to={activeInsight.to}>View explanation <ArrowRight/></NavLink></div></motion.div></AnimatePresence><div className="insightDots">{insights.map((_,i)=><button aria-label={`Show insight ${i+1}`} className={i===insightIndex?'active':''} onClick={()=>setInsightIndex(i)} key={i}/>)}</div></section>
+
+    <section className="snapshotStory"><div><span>FINANCIAL SNAPSHOT</span><h2>Four signals.<br/>One clear picture.</h2></div><div className="snapshotRibbon"><SnapshotMetric label="Current balance" value={money(balance)} detail="4.2% vs last month" tone="good" icon={WalletCards}/><SnapshotMetric label="Monthly spending" value={money(spending)} detail="8.4% vs last month" tone="good" icon={WalletCards}/><SnapshotMetric label="Financial risk" value={`${risk}/100`} detail="Risk indicators" tone="attention" icon={AlertTriangle}/><SnapshotMetric label="Savings" value={money(savings)} detail="6.8% vs last month" tone="good" icon={ShieldCheck}/></div></section>
+
+    <section className="movementStory"><header><span>HERE'S WHAT CHANGED</span><h2>Money movement,<br/>made understandable.</h2><p>Recent activity flows through FinGuard's explainable risk checks.</p></header><div className="movementStream">{transactions.slice(0,6).map((x,i)=><button className={(x.risk_level||'LOW').toLowerCase()} onClick={()=>setSelected(x)} key={x.id} style={{'--i':i} as React.CSSProperties}><i/><strong>{money(x.amount)}</strong><span>{x.merchant}</span><em>{x.risk_level||'RECORDED'}{x.risk_score!==undefined?` · ${x.risk_score}/100`:''}</em></button>)}</div>{focusRisk&&<motion.div className="riskMoment" animate={reduceMotion?{}:{boxShadow:['0 18px 55px rgba(248,113,113,.08)','0 18px 70px rgba(248,113,113,.18)','0 18px 55px rgba(248,113,113,.08)']}} transition={{duration:3,repeat:Infinity}}><AlertTriangle/><div><small>FIN AI NOTICE · POTENTIAL RISK</small><h3>{money(focusRisk.amount)} · {focusRisk.merchant}</h3><p>This transaction differs from the lower-risk activity in the available dataset.</p></div><button onClick={()=>setSelected(focusRisk)}>Review transaction <ArrowRight/></button></motion.div>}</section>
+
+    <section className="spendingStory"><div className="spendingNarrative"><span>HERE'S WHERE YOUR MONEY WENT</span><strong>{money(categoryTotal||spending)}</strong><h2>spent this month.</h2><p>Category totals remain mathematically aligned with the displayed monthly spending dataset.</p><div className="periodFilters">{['7D','30D','3M','6M','1Y'].map(x=><button className={period===x?'active':''} onClick={()=>setPeriod(x)} key={x}>{x}</button>)}</div></div><div className="spendingVisual"><ResponsiveContainer width="100%" height={230}><AreaChart data={trend}><defs><linearGradient id="storySpend" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7c8cff" stopOpacity=".35"/><stop offset="1" stopColor="#7c8cff" stopOpacity="0"/></linearGradient></defs><CartesianGrid vertical={false} stroke="var(--chart-grid)"/><XAxis dataKey="m" axisLine={false} tickLine={false}/><Tooltip contentStyle={{background:'var(--raised)',border:'1px solid var(--line)',borderRadius:10}} formatter={v=>money(Number(v))}/><Area type="monotone" dataKey="spend" stroke="#7c8cff" strokeWidth={2.4} fill="url(#storySpend)"/></AreaChart></ResponsiveContainer><div className="categoryBars">{categoryData.slice(0,8).map(x=>{const pct=categoryTotal?Math.round(x.value/categoryTotal*100):0;return <div key={x.name}><p><span>{x.name}</span><b>{pct}% · {money(x.value)}</b></p><i><em style={{width:`${pct}%`}}/></i></div>})}</div></div></section>
+
+    <section className="finRecommendation"><div><BrainCircuit/><span>HERE'S WHAT FIN AI RECOMMENDS</span><h2>Spending control has the clearest opportunity.</h2><p>{demo?'SAMPLE ANALYSIS · Food and discretionary categories are the most practical places to review in this fictional dataset.':'Based on your authenticated records, review the largest changing category before setting a new target.'}</p><NavLink to="/app/assistant">Ask Fin AI for the reasoning <ArrowRight/></NavLink></div><div className="recommendationSignal"><span>POTENTIAL MONTHLY IMPACT</span><strong>{money(1000)}</strong><p>Illustrative savings opportunity—not a guaranteed outcome.</p></div></section>
+
+    <section className="recentLedger"><header><div><span>RECENT TRANSACTIONS</span><h2>Review the underlying activity.</h2></div><NavLink to="/app/transactions">View all transactions <ArrowRight/></NavLink></header><div>{transactions.slice(0,6).map(x=><button onClick={()=>setSelected(x)} key={x.id}><i className={(x.risk_level||'recorded').toLowerCase()}><WalletCards/></i><span><b>{x.merchant}</b><small>{x.payment_method||x.category} · {x.date}</small></span><strong>{x.transaction_type==='income'?'+':'-'}{money(x.amount)}</strong><em>{x.risk_level||'Recorded'}</em></button>)}</div></section>
+
+    <button className="finAiFloat" onClick={()=>setFinOpen(x=>!x)} aria-expanded={finOpen}><BrainCircuit/><span>Fin AI</span>{finOpen?<X/>:<Sparkles/>}</button>
+    <AnimatePresence>{finOpen&&<motion.aside className="finAiPopover" role="dialog" aria-label="Fin AI quick assistant" initial={{opacity:0,y:14,scale:.97}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:10,scale:.98}}><header><div><BrainCircuit/><span><b>Fin AI</b><small>{demo?'DEMO AI · fictional dataset':'Grounded in authenticated records'}</small></span></div><button aria-label="Close Fin AI" onClick={()=>setFinOpen(false)}><X/></button></header><p>How can I help?</p><div className="quickPrompts">{['Why did spending increase?','Which transaction looks suspicious?','How can I save more?'].map(x=><button onClick={()=>askFinAI(x)} key={x}>{x}</button>)}</div>{(finLoading||finReply)&&<div className="quickReply">{finLoading?<span>Reviewing available records…</span>:finReply}</div>}<div className="quickComposer"><input aria-label="Ask Fin AI" value={finQ} onChange={e=>setFinQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&askFinAI()} placeholder="Ask about your finances…"/><button aria-label="Send to Fin AI" onClick={()=>askFinAI()} disabled={!finQ.trim()||finLoading}><Send/></button></div><NavLink to="/app/assistant">Open full Fin AI <ArrowRight/></NavLink></motion.aside>}</AnimatePresence>
+
+    <Drawer open={!!selected} onClose={()=>setSelected(null)} title="Transaction analysis" subtitle="Review the available details and explainable risk indicators.">{selected&&<div className="transactionDetail"><div className="detailAmount"><span>{selected.merchant}</span><strong>{money(selected.amount)}</strong></div><dl><div><dt>Transaction ID</dt><dd>{selected.id}</dd></div><div><dt>Date / time</dt><dd>{selected.date} · {selected.time||'Time unavailable'}</dd></div><div><dt>Category</dt><dd>{selected.category}</dd></div><div><dt>Payment method</dt><dd>{selected.payment_method||'Not recorded'}</dd></div><div><dt>Risk score</dt><dd>{selected.risk_score??'Not evaluated'}{selected.risk_score!==undefined?' / 100':''}</dd></div><div><dt>Risk level</dt><dd>{selected.risk_level||'Recorded'}</dd></div></dl><div className="drawerCallout"><b>Why this deserves attention</b><p>{selected.description||'No automated explanation is available for this transaction.'}</p></div><div className="drawerNotice"><ShieldCheck/><p>Recommended action: {selected.risk_score>=60?'Verify the transaction with your bank or payment provider through an official channel.':'Confirm the details match your activity.'}</p></div><div className="recoveryDrawerLinks"><NavLink to="/app/scam-analyzer">Analyze related content <ArrowRight/></NavLink><NavLink to="/app/recovery">Save evidence in Recovery <ArrowRight/></NavLink></div></div>}</Drawer>
   </div>
 }

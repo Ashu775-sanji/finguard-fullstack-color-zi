@@ -11,13 +11,16 @@ export type DemoTransaction={
 };
 
 export const demoTransactions:DemoTransaction[]=[
-  {id:'DEMO-TX-1001',merchant:'Unknown UPI Recipient',amount:8500,category:'Transfer',transaction_type:'expense',payment_method:'UPI',date:'2026-10-01',time:'22:42',risk_level:'HIGH',risk_score:78,description:'New recipient, unusually high amount and late transaction time.'},
+  {id:'DEMO-TX-1001',merchant:'Unknown UPI Recipient',amount:14500,category:'Transfer',transaction_type:'transfer',payment_method:'UPI',date:'2026-10-01',time:'22:42',risk_level:'HIGH',risk_score:78,description:'New recipient, unusually high amount and late transaction time.'},
   {id:'DEMO-TX-1002',merchant:'Amazon',amount:2499,category:'Shopping',transaction_type:'expense',payment_method:'Card',date:'2026-09-29',time:'14:18',risk_level:'LOW',risk_score:12,description:'Recognized merchant and amount is consistent with previous shopping activity.'},
   {id:'DEMO-TX-1003',merchant:'Swiggy',amount:680,category:'Food',transaction_type:'expense',payment_method:'UPI',date:'2026-09-28',time:'20:05',risk_level:'LOW',risk_score:8,description:'Recognized merchant and typical food-delivery amount.'},
   {id:'DEMO-TX-1004',merchant:'Netflix',amount:649,category:'Subscriptions',transaction_type:'expense',payment_method:'Card',date:'2026-09-27',time:'09:00',risk_level:'LOW',risk_score:4,description:'Expected recurring subscription.'},
   {id:'DEMO-TX-1005',merchant:'Electricity Board',amount:2840,category:'Bills',transaction_type:'expense',payment_method:'Net banking',date:'2026-09-25',time:'11:32',risk_level:'LOW',risk_score:5,description:'Expected utility payment to a recognized biller.'},
   {id:'DEMO-TX-1006',merchant:'Metro Mobility',amount:1252,category:'Travel',transaction_type:'expense',payment_method:'UPI',date:'2026-09-23',time:'08:16',risk_level:'LOW',risk_score:7,description:'Regular travel activity.'},
   {id:'DEMO-TX-1007',merchant:'Fresh Basket',amount:2000,category:'Food',transaction_type:'expense',payment_method:'Card',date:'2026-09-21',time:'18:40',risk_level:'LOW',risk_score:9,description:'Recognized grocery merchant.'},
+  {id:'DEMO-TX-1009',merchant:'Campus Learning',amount:3000,category:'Education',transaction_type:'expense',payment_method:'Card',date:'2026-09-19',time:'10:20',risk_level:'LOW',risk_score:6,description:'Expected education expense.'},
+  {id:'DEMO-TX-1010',merchant:'Cinema and Events',amount:2500,category:'Entertainment',transaction_type:'expense',payment_method:'UPI',date:'2026-09-18',time:'19:10',risk_level:'LOW',risk_score:10,description:'Recognized entertainment spending.'},
+  {id:'DEMO-TX-1011',merchant:'Local Services',amount:3000,category:'Other',transaction_type:'expense',payment_method:'Card',date:'2026-09-17',time:'16:05',risk_level:'LOW',risk_score:9,description:'Recognized local service expense.'},
   {id:'DEMO-TX-1008',merchant:'Unknown Merchant',amount:48500,category:'Transfer',transaction_type:'transfer',payment_method:'Bank transfer',date:'2026-09-20',time:'01:14',risk_level:'CRITICAL',risk_score:91,description:'Unrecognized recipient, unusually high value and atypical transaction time.'},
 ];
 
@@ -35,19 +38,20 @@ export const demoFinancialScore={
 export const demoDashboard={
   balance:42580,monthlySpending:18420,risk:18,savings:8240,
   categoryBreakdown:[
-    {name:'Transfer',value:8500},{name:'Food',value:2680},{name:'Bills',value:2840},
-    {name:'Shopping',value:2499},{name:'Travel',value:1252},{name:'Subscriptions',value:649},
+    {name:'Food',value:2680},{name:'Bills',value:2840},{name:'Shopping',value:2499},
+    {name:'Travel',value:1252},{name:'Subscriptions',value:649},{name:'Education',value:3000},
+    {name:'Entertainment',value:2500},{name:'Other',value:3000},
   ],
 };
 
 export const demoAlerts=[
-  {id:'DEMO-ALERT-1',type:'security',title:'Potentially unusual payment',message:'An ₹8,500 payment to a new UPI recipient has elevated risk indicators.',risk_level:'HIGH',is_read:false,created_at:'2026-10-01T22:43:00Z'},
+  {id:'DEMO-ALERT-1',type:'security',title:'Potentially unusual payment',message:'A ₹14,500 payment to a new UPI recipient has elevated risk indicators.',risk_level:'HIGH',is_read:false,created_at:'2026-10-01T22:43:00Z'},
   {id:'DEMO-ALERT-2',type:'spending',title:'Food spending increased',message:'Food spending is 32% above the previous month in this simulated dataset.',risk_level:'MEDIUM',is_read:false,created_at:'2026-10-01T10:00:00Z'},
 ];
 
 export const demoInsights=[
   {id:'DEMO-INSIGHT-1',title:'Food spending increased 32%',impact:2340,recommendation:'Reducing food-delivery spending by ₹1,000 could increase projected monthly savings.'},
-  {id:'DEMO-INSIGHT-2',title:'Recurring subscriptions',impact:2840,recommendation:'Review subscriptions you no longer use before the next billing cycle.'},
+  {id:'DEMO-INSIGHT-2',title:'Recurring subscription detected',impact:649,recommendation:'Review subscriptions you no longer use before the next billing cycle.'},
 ];
 
 export const demoPredictions=[
