@@ -1,9 +1,11 @@
-import {AnimatePresence,motion} from 'framer-motion';
+import {AnimatePresence,motion,useReducedMotion} from 'framer-motion';
 import {X} from 'lucide-react';
 import {ReactNode,useEffect,useRef} from 'react';
 
-export default function Drawer({open,title,subtitle,onClose,children,label=title}:{open:boolean;title:string;subtitle?:string;onClose:()=>void;children:ReactNode;label?:string}){
+export default function Drawer({open,title,subtitle,onClose,children,label=title,disableMotion=false}:{open:boolean;title:string;subtitle?:string;onClose:()=>void;children:ReactNode;label?:string;disableMotion?:boolean}){
   const panel=useRef<HTMLElement>(null);
+  const systemReducedMotion=useReducedMotion();
+  const reducedMotion=!!systemReducedMotion||disableMotion;
   useEffect(()=>{
     if(!open)return;
     const previousFocus=document.activeElement as HTMLElement|null;
@@ -24,7 +26,7 @@ export default function Drawer({open,title,subtitle,onClose,children,label=title
   },[open,onClose]);
   return <AnimatePresence>{open&&<div className="drawerLayer">
     <motion.button className="drawerBackdrop" aria-label="Close drawer" onClick={onClose} initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}/>
-    <motion.aside ref={panel} className="appDrawer" role="dialog" aria-modal="true" aria-label={label} initial={{x:'100%'}} animate={{x:0}} exit={{x:'100%'}} transition={{duration:.24,ease:[.22,1,.36,1]}}>
+    <motion.aside ref={panel} className="appDrawer" role="dialog" aria-modal="true" aria-label={label} initial={reducedMotion?false:{x:'100%'}} animate={{x:0}} exit={reducedMotion?{opacity:0}:{x:'100%'}} transition={{duration:reducedMotion?0:.24,ease:[.22,1,.36,1]}}>
       <header><div><span>FINGUARD</span><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div><button className="drawerClose" aria-label={`Close ${title}`} onClick={onClose}><X/></button></header>
       <div className="drawerBody">{children}</div>
     </motion.aside>
