@@ -32,6 +32,8 @@ cd frontend && npm install && npm run dev
 
 Open `http://localhost:5173`. The UI ships with realistic demo data; set `VITE_API_URL=http://localhost:8000/api/v1` to connect live APIs.
 
+The backend `.env.example` enables `SEED_DEMO=true` and `DEMO_PASSWORD`, so the demo login above is seeded on first startup. Set `SEED_DEMO=false` for a clean database.
+
 ## Security baseline
 - Argon2 password hashing, short-lived JWT access tokens, strict CORS allow-list
 - Pydantic validation, ORM queries, ownership checks, trusted-host and security headers

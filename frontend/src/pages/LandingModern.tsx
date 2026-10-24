@@ -1,6 +1,6 @@
 import {motion,useReducedMotion,useScroll,useTransform} from 'framer-motion';
 import {Activity,AlertTriangle,ArrowRight,BrainCircuit,Check,ChevronRight,FileText,Menu,MessageSquareWarning,ShieldCheck,Sparkles,WalletCards} from 'lucide-react';
-import {useRef,useState} from 'react';
+import {MouseEvent,useRef,useState} from 'react';
 import {Link} from 'react-router-dom';
 
 const features=[
@@ -16,10 +16,13 @@ export default function LandingModern(){
   const {scrollYProgress}=useScroll({target:hero,offset:['start start','end start']});
   const shieldY=useTransform(scrollYProgress,[0,1],[0,110]);
   const shieldRotate=useTransform(scrollYProgress,[0,1],[-8,12]);
+  // Scroll in-page without touching the URL hash: HashRouter would otherwise treat
+  // anchors like #platform as a route and reset the page to the top (/#).
+  const scrollToSection=(id:string)=>(e:MouseEvent<HTMLAnchorElement>)=>{e.preventDefault();document.getElementById(id)?.scrollIntoView({behavior:reduceMotion?'auto':'smooth',block:'start'})};
   return <div className="modernLanding">
     <header className={`landingNav ${menuOpen?'menuOpen':''}`}>
       <Link to="/" className="landingLogo"><span><ShieldCheck/></span><b>FinGuard</b></Link>
-      <nav><a href="#platform" onClick={()=>setMenuOpen(false)}>Platform</a><a href="#how" onClick={()=>setMenuOpen(false)}>How it works</a><a href="#trust" onClick={()=>setMenuOpen(false)}>Security</a><Link to="/login">Education</Link><Link className="mobileNavAction" to="/login">Analyze a scam</Link></nav>
+      <nav><a href="#platform" onClick={scrollToSection('platform')} onMouseDown={()=>setMenuOpen(false)}>Platform</a><a href="#how" onClick={scrollToSection('how')} onMouseDown={()=>setMenuOpen(false)}>How it works</a><a href="#trust" onClick={scrollToSection('trust')} onMouseDown={()=>setMenuOpen(false)}>Security</a><Link to="/login">Education</Link><Link className="mobileNavAction" to="/login">Analyze a scam</Link></nav>
       <div><Link to="/login" className="textLink">Sign in</Link><Link to="/login" className="landingCta">Analyze a scam <ArrowRight/></Link></div>
       <button aria-label={menuOpen?'Close menu':'Open menu'} aria-expanded={menuOpen} onClick={()=>setMenuOpen(x=>!x)}><Menu/></button>
     </header>
@@ -31,7 +34,7 @@ export default function LandingModern(){
           <span><i/>AI-POWERED FINANCIAL SAFETY</span>
           <h1>Your money deserves <em>intelligent protection.</em></h1>
           <p>FinGuard uses AI-powered financial intelligence to detect suspicious activity, understand your spending, and help you respond safely.</p>
-          <div><Link to="/login" className="landingCta">Get started <ArrowRight/></Link><a href="#story" className="secondaryLanding">Explore FinGuard <ChevronRight/></a></div>
+          <div><Link to="/login" className="landingCta">Get started <ArrowRight/></Link><a href="#story" className="secondaryLanding" onClick={scrollToSection('story')}>Explore FinGuard <ChevronRight/></a></div>
           <small><ShieldCheck/>No bank credentials required <i/> Explainable risk signals <i/> Calm incident guidance</small>
         </motion.div>
         <motion.div className="cinematicShieldScene" initial={{opacity:0,scale:.94}} animate={{opacity:1,scale:1}} transition={{duration:.8,delay:.08}} style={{y:reduceMotion?0:shieldY,rotateY:reduceMotion?0:shieldRotate}}>
@@ -122,6 +125,6 @@ export default function LandingModern(){
         <span>FINANCIAL SAFETY, EXPLAINED</span><h2>Know your money.<br/>Protect your future.</h2><p>FinGuard gives you the intelligence to detect risks, understand your spending, and respond with confidence.</p><div><Link to="/login" className="landingCta">Get started <ArrowRight/></Link><Link to="/login" className="secondaryLanding">Try Scam Analyzer <ChevronRight/></Link></div>
       </section>
     </main>
-    <footer className="modernFooter"><div className="landingLogo"><span><ShieldCheck/></span><b>FinGuard</b></div><p>Detect scams. Understand your spending. Protect your money.</p><div><a href="#platform">Platform</a><a href="#trust">Security</a><Link to="/login">Sign in</Link></div><small>© 2026 FinGuard · Built by VOID Developer Team</small></footer>
+    <footer className="modernFooter"><div className="landingLogo"><span><ShieldCheck/></span><b>FinGuard</b></div><p>Detect scams. Understand your spending. Protect your money.</p><div><a href="#platform" onClick={scrollToSection('platform')}>Platform</a><a href="#trust" onClick={scrollToSection('trust')}>Security</a><Link to="/login">Sign in</Link></div><small>© 2026 FinGuard · Built by VOID Developer Team</small></footer>
   </div>
 }

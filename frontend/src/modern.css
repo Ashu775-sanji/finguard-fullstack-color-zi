@@ -263,3 +263,34 @@ button,a,input,textarea,select{font-family:inherit}button,a{transition:color .18
 /* Portalled drawers keep the same restrained lavender action language. */
 .drawerLayer .primary{background:#a4afff!important;color:#10172d!important;box-shadow:none!important;font-weight:600}
 .drawerLayer .appDrawer>header p{letter-spacing:normal!important;text-transform:none!important;font-weight:400!important}
+
+/* ===== Polish pass: ambient depth, tactile controls, comfortable reading =====
+   Additive styling only — no layout, routing or data behavior is changed. */
+::selection{background:rgba(124,140,255,.32);color:#fff}
+[data-theme="light"] ::selection{background:rgba(124,140,255,.22);color:#10172d}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(148,158,186,.24);border:3px solid var(--canvas);border-radius:9px}
+::-webkit-scrollbar-thumb:hover{background:rgba(148,158,186,.4)}
+[data-theme="light"] ::-webkit-scrollbar-thumb{background:rgba(90,102,130,.26);border-color:var(--canvas)}
+/* Landing: breathing aurora behind the hero shield for a calmer, alive first screen. */
+.modernHero:before{content:'';position:absolute;inset:-12% -6% -18%;z-index:0;pointer-events:none;opacity:.6;
+  background:
+    radial-gradient(42% 38% at 68% 30%,rgba(124,140,255,.13),transparent 70%),
+    radial-gradient(38% 42% at 22% 78%,rgba(52,211,153,.07),transparent 66%),
+    radial-gradient(30% 34% at 85% 74%,rgba(167,139,250,.09),transparent 64%);
+  animation:heroAurora 16s ease-in-out infinite alternate}
+@keyframes heroAurora{from{transform:translate3d(0,0,0) scale(1);opacity:.5}to{transform:translate3d(0,-2.5%,0) scale(1.05);opacity:.72}}
+.heroCopy{z-index:2}.heroGrid,.modernHero>.dataParticles{z-index:1}
+/* Tactile press feedback on the main landing CTA pair. */
+.landingCta:active,.secondaryLanding:active{transform:translateY(1px) scale(.985)}
+.landingCta:hover{box-shadow:0 10px 28px rgba(124,140,255,.25)}
+.featureRail article{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.featureRail article:hover{box-shadow:0 18px 44px rgba(0,0,0,.24)}
+/* Workspace: gentle card hover elevation and crisper header controls. */
+.premiumShell main{scrollbar-gutter:stable}
+.premiumHeader .actions>button:active{transform:scale(.95)}
+.premiumHeader .actions>.primary:hover{box-shadow:0 8px 22px rgba(124,140,255,.22)}
+/* In-page anchors stop under the fixed landing nav when scrolled to. */
+.modernLanding section[id]{scroll-margin-top:96px}
+@media(prefers-reduced-motion:reduce){.modernHero:before{animation:none}.landingCta:hover{transform:none}}
